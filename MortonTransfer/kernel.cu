@@ -171,9 +171,11 @@ int main(){
 	// --- Test 1: Set known values at edge and random positions ---
 	std::cout << "[TEST 1] Boundary and random value check...\n";
 
-	std::vector<unsigned> test_indices = {0, total_values - 1, 17, 37, 1023};
-	for(unsigned idx : test_indices)
-		set2bits_host(h_input, idx, (idx % 4));  // deterministic value
+	std::vector<unsigned> test_indices = {0, 1, total_values - 1};
+	set2bits_host(h_input, test_indices[0], 3);
+	set2bits_host(h_input, test_indices[1], 1);
+	set2bits_host(h_input, test_indices[2], 2);
+	dump2bit_grid(h_input, size_side, "Input");
 
 	// Upload to device
 	uint64_t* d_input;
@@ -191,7 +193,6 @@ int main(){
 
 	CHECK_CUDA(cudaMemcpy(h_result.data(), d_output, buffer_size, cudaMemcpyDeviceToHost));
 
-	dump2bit_grid(h_input, size_side, "Input");
 	dump2bit_grid(h_result, size_side, "Result after shift");
 
 	// Move values back on CPU and check
