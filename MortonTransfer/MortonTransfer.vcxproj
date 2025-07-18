@@ -85,6 +85,7 @@
       <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compute_75,sm_75</CodeGeneration>
       <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_75,sm_75</CodeGeneration>
     </CudaCompile>
+    <CudaCompile Include="SingleThread.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

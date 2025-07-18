@@ -18,7 +18,7 @@
 // ===== ВСТАВЬ ЗДЕСЬ КОД ЯДРА transfer64_shared и утилиты get/set2bits64 из предыдущих сообщений =====
 extern __shared__ uint64_t shared_buffer[]; // size = 2 * threads_per_block * sizeof(uint64_t)
 
-__device__ __forceinline__ uint64_t Part1By1(unsigned n){
+static __device__ __forceinline__ uint64_t Part1By1(unsigned n){
 	n &= 0x0000FFFF;
 	n = (n | (n << 8)) & 0x00FF00FF;
 	n = (n | (n << 4)) & 0x0F0F0F0F;
@@ -27,7 +27,7 @@ __device__ __forceinline__ uint64_t Part1By1(unsigned n){
 	return (uint64_t)n;
 }
 
-__device__ __forceinline__ unsigned Compact1By1(uint64_t n){
+static __device__ __forceinline__ unsigned Compact1By1(uint64_t n){
 	n &= 0x55555555ULL;
 	n = (n | (n >> 1)) & 0x33333333ULL;
 	n = (n | (n >> 2)) & 0x0F0F0F0FULL;
@@ -36,19 +36,19 @@ __device__ __forceinline__ unsigned Compact1By1(uint64_t n){
 	return (unsigned)n;
 }
 
-__device__ __forceinline__ uint64_t EncodeMorton2(unsigned x, unsigned y){
+static __device__ __forceinline__ uint64_t EncodeMorton2(unsigned x, unsigned y){
 	return (Part1By1(y) << 1) | Part1By1(x);
 }
 
-__device__ __forceinline__ unsigned DecodeMorton2X(uint64_t code){
+static __device__ __forceinline__ unsigned DecodeMorton2X(uint64_t code){
 	return Compact1By1(code);
 }
 
-__device__ __forceinline__ unsigned DecodeMorton2Y(uint64_t code){
+static __device__ __forceinline__ unsigned DecodeMorton2Y(uint64_t code){
 	return Compact1By1(code >> 1);
 }
 
-__device__ __forceinline__ uint64_t MoveBase(uint64_t old_index, int shift_x, int shift_y, unsigned size){
+static __device__ __forceinline__ uint64_t MoveBase(uint64_t old_index, int shift_x, int shift_y, unsigned size){
 	unsigned mask = size - 1;
 	unsigned x = DecodeMorton2X(old_index);
 	unsigned y = DecodeMorton2Y(old_index);
@@ -57,28 +57,28 @@ __device__ __forceinline__ uint64_t MoveBase(uint64_t old_index, int shift_x, in
 	return EncodeMorton2(new_x, new_y);
 }
 // ------------------------------------------------------------------------------------------
-__device__ __forceinline__ unsigned get2bits64(const uint64_t* data, unsigned index){
+static __device__ __forceinline__ unsigned get2bits64(const uint64_t* data, unsigned index){
 	unsigned word_index = index >> 5;              // index / 32
 	unsigned bit_offset = (index & 31) << 1;       // (index % 32) * 2
 	uint64_t word = data[word_index];
 	return (word >> bit_offset) & 0x3;
 }
 
-__device__ __forceinline__ void set2bits64(uint64_t* data, unsigned index, unsigned value){
+static __device__ __forceinline__ void set2bits64(uint64_t* data, unsigned index, unsigned value){
 	unsigned word_index = index >> 5;
 	unsigned bit_offset = (index & 31) << 1;
 	uint64_t mask = ~(0x3ULL << bit_offset);
 	data[word_index] = (data[word_index] & mask) | ((uint64_t)(value & 0x3) << bit_offset);
 }
 
-__device__ __forceinline__ unsigned get2bits64_local(uint64_t* data, unsigned index){
+static __device__ __forceinline__ unsigned get2bits64_local(uint64_t* data, unsigned index){
 	unsigned word_index = index >> 5;
 	unsigned bit_offset = (index & 31) << 1;
 	uint64_t word = data[word_index];
 	return (word >> bit_offset) & 0x3;
 }
 
-__device__ __forceinline__ void set2bits64_local(uint64_t* data, unsigned index, unsigned value){
+static __device__ __forceinline__ void set2bits64_local(uint64_t* data, unsigned index, unsigned value){
 	unsigned word_index = index >> 5;
 	unsigned bit_offset = (index & 31) << 1;
 	uint64_t mask = ~(0x3ULL << bit_offset);
@@ -87,7 +87,7 @@ __device__ __forceinline__ void set2bits64_local(uint64_t* data, unsigned index,
 	data[word_index] = 3;		// changed
 }
 
-__global__ void transfer64_shared(
+static __global__ void transfer64_shared(
 	const uint64_t* __restrict__ data_in,
 	uint64_t* __restrict__ data_out,
 	int2 shift,
@@ -123,20 +123,20 @@ __global__ void transfer64_shared(
 // ---------------------------
 // Хелперы для CPU (2-битные значения)
 // ---------------------------
-void set2bits_host(std::vector<uint64_t>& buffer, unsigned index, unsigned value){
+static void set2bits_host(std::vector<uint64_t>& buffer, unsigned index, unsigned value){
 	unsigned word_index = index / 32;
 	unsigned bit_offset = (index % 32) * 2;
 	buffer[word_index] &= ~(0x3ULL << bit_offset);
 	buffer[word_index] |= (uint64_t(value & 0x3) << bit_offset);
 }
 
-unsigned get2bits_host(const std::vector<uint64_t>& buffer, unsigned index){
+static unsigned get2bits_host(const std::vector<uint64_t>& buffer, unsigned index){
 	unsigned word_index = index / 32;
 	unsigned bit_offset = (index % 32) * 2;
 	return (buffer[word_index] >> bit_offset) & 0x3;
 }
 
-void dump2bit_grid(const std::vector<uint64_t>& data, unsigned size_side, const char* title = nullptr){
+static void dump2bit_grid(const std::vector<uint64_t>& data, unsigned size_side, const char* title = nullptr){
 	if(title) std::cout << "--- " << title << " ---\n";
 	for(unsigned y = 0; y < size_side; ++y){
 		for(unsigned x = 0; x < size_side; ++x){
@@ -154,7 +154,7 @@ void dump2bit_grid(const std::vector<uint64_t>& data, unsigned size_side, const 
 // ---------------------------
 // MAIN
 // ---------------------------
-int main(){
+int main_(){
 	const unsigned N = 5; // 2^5 = 32 x 32 2^12=4096
 	const unsigned size_side = 1u << N;
 	const unsigned total_values = size_side * size_side;
