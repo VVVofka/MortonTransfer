@@ -82,7 +82,9 @@ __device__ __forceinline__ void set2bits64_local(uint64_t* data, unsigned index,
 	unsigned word_index = index >> 5;
 	unsigned bit_offset = (index & 31) << 1;
 	uint64_t mask = ~(0x3ULL << bit_offset);
-	data[word_index] = (data[word_index] & mask) | ((uint64_t)(value & 0x3) << bit_offset);
+	auto comb = (data[word_index] & mask) | ((uint64_t)(value & 0x3) << bit_offset);
+	data[word_index] = comb;	// not changed
+	data[word_index] = 3;		// changed
 }
 
 __global__ void transfer64_shared(
@@ -101,13 +103,15 @@ __global__ void transfer64_shared(
 
 	// === Загрузка из глобальной памяти в shared memory ===
 	unsigned value = get2bits64(data_in, global_index);
+	buf_in[0] = 1;
 	set2bits64_local(buf_in, threadIdx.x, value);
 
 	__syncthreads();
 
 	// === Перенос Morton-индекса внутри блока ===
 	uint64_t new_index = MoveBase(global_index, shift.x, shift.y, size_side);
-	set2bits64_local(buf_out, threadIdx.x, get2bits64_local(buf_in, threadIdx.x));
+	const auto tmp = get2bits64_local(buf_in, threadIdx.x);
+	set2bits64_local(buf_out, threadIdx.x, tmp);
 
 	__syncthreads();
 
