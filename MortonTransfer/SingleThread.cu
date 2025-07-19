@@ -77,8 +77,7 @@ static void dump2bit_grid(const std::vector<uint64_t>& data, unsigned size_side,
 		std::cout << "\n";
 	}
 	std::cout << std::endl;
-}
-// -------------------------------------------------------------------------
+}// -------------------------------------------------------------------------
 static __global__ void transfer64_tile(const uint64_t* __restrict__ data_in,
 								uint64_t* __restrict__ data_out,
 								int2 shift,
@@ -103,8 +102,7 @@ static __global__ void transfer64_tile(const uint64_t* __restrict__ data_in,
 		result |= uint64_t(val & 0x3) << (i * 2);
 	}
 	data_out[tid] = result;
-}
-// ---------------------------
+}// ---------------------------
 // MAIN
 // ---------------------------
 void test1(){
@@ -129,7 +127,6 @@ void test1(){
 			set2bits64(h_input.data(), id_morton, val);	//25:(5,2)
 		}
 	}
-
 	// --- Test 1: Set known values at edge and random positions ---
 	std::cout << "[TEST 1] Boundary and random value check...\n";
 	unsigned write_val = 3; // 2 bit
@@ -222,8 +219,7 @@ double test2(unsigned N = 10, int num_iters = 1000, unsigned threads_per_block =
 	CHECK_CUDA(cudaFree(d_input));
 	CHECK_CUDA(cudaFree(d_output));
 	return avd_time;
-}
-// ---------------------------
+}// ---------------------------
 int main(){
 	auto start = std::chrono::high_resolution_clock::now();
 	int errors = 0;
