@@ -17,6 +17,11 @@
         } \
     } while (0)
 
+__constant__ unsigned SZ0 = 0;
+static void setSZ0toConstantMem(unsigned sz0){
+	CHECK_CUDA(cudaMemcpyToSymbol(static_cast<const void*>(&SZ0), &sz0, sizeof(sz0), 0, cudaMemcpyHostToDevice));
+}
+
 static __device__ __host__ __forceinline__ unsigned DecodeMorton2X(unsigned code){
 	code &= 0x55555555;
 	code = (code ^ (code >> 1)) & 0x33333333;
@@ -80,8 +85,7 @@ static void dump2bit_grid(const std::vector<uint64_t>& data, unsigned size_side,
 }// -------------------------------------------------------------------------
 static __global__ void transfer64_tile(const uint64_t* __restrict__ data_in,
 								uint64_t* __restrict__ data_out,
-								int2 shift,
-								unsigned size_side){
+								int2 shift){
 	unsigned tid = blockIdx.x * blockDim.x + threadIdx.x;
 	uint64_t result = 0;
 #pragma unroll
@@ -93,8 +97,8 @@ static __global__ void transfer64_tile(const uint64_t* __restrict__ data_in,
 		unsigned y = DecodeMorton2Y(out_index);
 
 		// Перенос координат в старый базис (откуда читаем)
-		unsigned x_in = (x - shift.x + size_side) & (size_side - 1);
-		unsigned y_in = (y - shift.y + size_side) & (size_side - 1);
+		unsigned x_in = (x - shift.x + SZ0) & (SZ0 - 1);
+		unsigned y_in = (y - shift.y + SZ0) & (SZ0 - 1);
 
 		unsigned in_index = EncodeMorton2(x_in, y_in);
 		unsigned val = get2bits64(data_in, in_index);
@@ -141,8 +145,8 @@ void test1(){
 	CHECK_CUDA(cudaMemset(d_output, 0, buffer_size));
 	unsigned blocks = (total_words + threads_per_block - 1) / threads_per_block;
 	int2 shift = {-3, -1}; // to 2 1 (6)
-
-	transfer64_tile << <blocks, threads_per_block >> > (d_input, d_output, shift, size_side);
+	setSZ0toConstantMem(size_side);
+	transfer64_tile << <blocks, threads_per_block >> > (d_input, d_output, shift);
 	CHECK_CUDA(cudaDeviceSynchronize());
 	CHECK_CUDA(cudaMemcpy(h_result.data(), d_output, buffer_size, cudaMemcpyDeviceToHost));
 	std::string s = "Result after shift " + std::to_string(shift.x) + ", " + std::to_string(shift.y);
@@ -194,8 +198,9 @@ double test2(unsigned N = 10, int num_iters = 1000, unsigned threads_per_block =
 	}
 	shifts[0] = {-sum.x, -sum.y};
 	auto start = std::chrono::high_resolution_clock::now();
+	setSZ0toConstantMem(size_side);
 	for(int i = 0; i < num_iters; ++i){
-		transfer64_tile << <blocks, threads_per_block >> >(d_input, d_output, shifts[i], size_side);
+		transfer64_tile << <blocks, threads_per_block >> > (d_input, d_output, shifts[i]);
 		CHECK_CUDA(cudaDeviceSynchronize());
 		CHECK_CUDA(cudaMemcpy(d_input, d_output, buffer_size, cudaMemcpyDeviceToDevice));
 	}
