@@ -1,4 +1,5 @@
 ﻿#include <cuda_runtime.h>
+#include <cuda.h>
 #include <device_launch_parameters.h>
 #include <stdint.h>
 #include <iostream>
@@ -30,7 +31,6 @@ static __device__ __host__ __forceinline__ unsigned DecodeMorton2X(unsigned code
 	code = (code ^ (code >> 8)) & 0x0000FFFF;
 	return code;
 }
-
 static __device__ __host__ __forceinline__ unsigned DecodeMorton2Y(unsigned code){
 	code >>= 1;
 	code &= 0x55555555;
@@ -40,7 +40,6 @@ static __device__ __host__ __forceinline__ unsigned DecodeMorton2Y(unsigned code
 	code = (code ^ (code >> 8)) & 0x0000FFFF;
 	return code;
 }
-
 static __device__ __host__ __forceinline__ unsigned EncodeMorton2(unsigned x, unsigned y){
 	x &= 0x0000ffff;
 	y &= 0x0000ffff;
@@ -106,7 +105,8 @@ static __global__ void transfer64_tile(const uint64_t* __restrict__ data_in,
 		result |= uint64_t(val & 0x3) << (i * 2);
 	}
 	data_out[tid] = result;
-}// ---------------------------
+}
+// ---------------------------
 // MAIN
 // ---------------------------
 void test1(){
