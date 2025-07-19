@@ -103,8 +103,8 @@ static __global__ void transfer64_tile(const uint64_t* __restrict__ data_in,
 	}
 	data_out[tid] = result;
 }// ---------------------------
-// MAIN
-// ---------------------------
+ // MAIN
+ // ---------------------------
 void test1(){
 	const unsigned N = 5; // 2^5 = 32 x 32 2^12=4096
 	const unsigned size_side = 1u << N;
