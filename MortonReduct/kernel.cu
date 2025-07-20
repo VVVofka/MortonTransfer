@@ -193,134 +193,134 @@ __host__ __forceinline__ uint64_t bit_reverse64(uint64_t x){
 	x = ((x & 0x0000FFFF0000FFFFULL) << 16) | ((x >> 16) & 0x0000FFFF0000FFFFULL);
 	return (x << 32) | (x >> 32);
 }
+//int test_reduce(unsigned size_side = 32){
+//	srand(42);
+//	const unsigned total_values = size_side * size_side;
+//	const unsigned total_words = (total_values + 31) / 32;
+//
+//	const unsigned mid_side = size_side >> 1;
+//	const unsigned mid_len = mid_side * mid_side;
+//	const unsigned total_words_mid = (mid_len + 15) / 16;
+//
+//	const unsigned top_side = size_side >> 2;
+//	const unsigned top_len = top_side * top_side;
+//	const unsigned total_words_top = (top_len + 15) / 16; // исправлено
+//
+//	std::vector<uint64_t> h_input(total_words, 0);
+//	std::vector<uint64_t> h_shifted(total_words, 0);
+//	std::vector<unsigned> h_mid(mid_len, 0);	// исправлено: размер именно mid_len
+//	std::vector<unsigned> h_top(top_len, 0);	// исправлено: размер top_len
+//
+//	// 1. Fill input with pseudo-random pattern
+//	for(unsigned i = 0; i < total_values; ++i){
+//		unsigned rnd1 = ((double)rand() / RAND_MAX) < 0.73 ? 0 : 2;
+//		unsigned rnd0 = ((double)rand() / RAND_MAX) < 0.77 ? 0 : 1;
+//		unsigned val = rnd1 + rnd0;
+//		unsigned word = i >> 5;
+//		unsigned bit = (i & 31) << 1;
+//		h_input[word] |= uint64_t(val & 0x3) << bit;
+//	}
+//	dump2bit_grid(h_input, "Input");
+//
+//	// 2. Compute expected results on CPU
+//	auto get_val = [&](const std::vector<uint64_t>& d, unsigned idx) -> unsigned{
+//		return (d[idx >> 5] >> ((idx & 31) << 1)) & 0x3;
+//	};
+//
+//	auto bit_reverse32 = [](unsigned x) -> unsigned{
+//		x = __builtin_bswap32(x);
+//		x = ((x & 0x0F0F0F0F) << 4) | ((x & 0xF0F0F0F0) >> 4);
+//		x = ((x & 0x33333333) << 2) | ((x & 0xCCCCCCCC) >> 2);
+//		x = ((x & 0x55555555) << 1) | ((x & 0xAAAAAAAA) >> 1);
+//		return x;
+//	};
+//
+//	auto bit_reverse64 = [](uint64_t x) -> uint64_t{
+//		x = __builtin_bswap64(x);
+//		x = ((x & 0x0F0F0F0F0F0F0F0FULL) << 4) | ((x & 0xF0F0F0F0F0F0F0F0ULL) >> 4);
+//		x = ((x & 0x3333333333333333ULL) << 2) | ((x & 0xCCCCCCCCCCCCCCCCULL) >> 2);
+//		x = ((x & 0x5555555555555555ULL) << 1) | ((x & 0xAAAAAAAAAAAAAAAAULL) >> 1);
+//		return x;
+//	};
+//
+//	auto encode = [&](unsigned x, unsigned y){
+//		return bit_reverse64((bit_reverse32(x) >> 1) | ((bit_reverse32(y) >> 1) << 1)) >> 32;
+//	};
+//
+//	auto mask4 = [](unsigned a4){
+//		return (0b1111111011101000 >> (a4 & 15)) & 1;
+//	};
+//	auto mask8 = [&](unsigned a8){
+//		return mask4(a8 & 0xF) | (mask4((a8 >> 1) & 0xF) << 1);
+//	};
+//
+//	int2 shift = {3, -5};
+//
+//	for(unsigned ty = 0; ty < top_side; ++ty){
+//		for(unsigned tx = 0; tx < top_side; ++tx){
+//			unsigned in_base_x = tx * 4;
+//			unsigned in_base_y = ty * 4;
+//			unsigned tid = encode(tx, ty);
+//
+//			unsigned combined = 0;
+//			for(unsigned my = 0; my < 2; ++my){
+//				for(unsigned mx = 0; mx < 2; ++mx){
+//					unsigned local_mask = 0;
+//					for(unsigned j = 0; j < 4; ++j){
+//						for(unsigned i = 0; i < 4; ++i){
+//							unsigned x = (in_base_x + mx * 2 + i - shift.x + size_side) & (size_side - 1);
+//							unsigned y = (in_base_y + my * 2 + j - shift.y + size_side) & (size_side - 1);
+//							unsigned idx = encode(x, y);
+//							unsigned val = get_val(h_input, idx);
+//							local_mask |= (val & 1) << (j * 4 + i);
+//						}
+//					}
+//					unsigned mid_val = mask8(local_mask);
+//					h_mid[((ty * 2 + my) * mid_side + (tx * 2 + mx))] = mid_val;
+//					combined |= (mid_val & 3) << ((my * 2 + mx) * 2);
+//				}
+//			}
+//			h_top[tid] = mask8(combined);
+//		}
+//	}
+//
+//	dump2bit_grid(h_mid, "Mid");
+//	dump2bit_grid(h_top, "Top");
+//
+//	// 3. Upload to GPU and launch kernel
+//	uint64_t* d_input, * d_shift;
+//	unsigned* d_mid, * d_top;
+//	CHECK_CUDA(cudaMalloc(&d_input, total_words * sizeof(uint64_t)));
+//	CHECK_CUDA(cudaMalloc(&d_shift, total_words * sizeof(uint64_t)));
+//	CHECK_CUDA(cudaMalloc(&d_mid, mid_len * sizeof(unsigned)));
+//	CHECK_CUDA(cudaMalloc(&d_top, top_len * sizeof(unsigned)));
+//
+//	CHECK_CUDA(cudaMemcpy(d_input, h_input.data(), total_words * sizeof(uint64_t), cudaMemcpyHostToDevice));
+//	setSZ0toConstantMem(size_side);
+//	reduct << <(top_len + 255) / 256, 256 >> > (d_input, d_shift, d_mid, d_top, shift);
+//	CHECK_CUDA(cudaDeviceSynchronize());
+//
+//	std::vector<unsigned> gpu_top(top_len);
+//	CHECK_CUDA(cudaMemcpy(gpu_top.data(), d_top, top_len * sizeof(unsigned), cudaMemcpyDeviceToHost));
+//
+//	CHECK_CUDA(cudaFree(d_input));
+//	CHECK_CUDA(cudaFree(d_shift));
+//	CHECK_CUDA(cudaFree(d_mid));
+//	CHECK_CUDA(cudaFree(d_top));
+//
+//	// 4. Compare
+//	int errors = 0;
+//	for(unsigned i = 0; i < top_len; ++i){
+//		if(gpu_top[i] != h_top[i]){
+//			printf("Mismatch at %u: expected %u, got %u\n", i, h_top[i], gpu_top[i]);
+//			if(++errors > 10) break;
+//		}
+//	}
+//	printf("Test completed with %d mismatches\n", errors);
+//	return errors;
+//}
+
 int test_reduce(unsigned size_side = 32){
-	srand(42);
-	const unsigned total_values = size_side * size_side;
-	const unsigned total_words = (total_values + 31) / 32;
-
-	const unsigned mid_side = size_side >> 1;
-	const unsigned mid_len = mid_side * mid_side;
-	const unsigned total_words_mid = (mid_len + 15) / 16;
-
-	const unsigned top_side = size_side >> 2;
-	const unsigned top_len = top_side * top_side;
-	const unsigned total_words_top = (top_len + 15) / 16; // исправлено
-
-	std::vector<uint64_t> h_input(total_words, 0);
-	std::vector<uint64_t> h_shifted(total_words, 0);
-	std::vector<unsigned> h_mid(mid_len, 0);	// исправлено: размер именно mid_len
-	std::vector<unsigned> h_top(top_len, 0);	// исправлено: размер top_len
-
-	// 1. Fill input with pseudo-random pattern
-	for(unsigned i = 0; i < total_values; ++i){
-		unsigned rnd1 = ((double)rand() / RAND_MAX) < 0.73 ? 0 : 2;
-		unsigned rnd0 = ((double)rand() / RAND_MAX) < 0.77 ? 0 : 1;
-		unsigned val = rnd1 + rnd0;
-		unsigned word = i >> 5;
-		unsigned bit = (i & 31) << 1;
-		h_input[word] |= uint64_t(val & 0x3) << bit;
-	}
-	dump2bit_grid(h_input, "Input");
-
-	// 2. Compute expected results on CPU
-	auto get_val = [&](const std::vector<uint64_t>& d, unsigned idx) -> unsigned{
-		return (d[idx >> 5] >> ((idx & 31) << 1)) & 0x3;
-	};
-
-	auto bit_reverse32 = [](unsigned x) -> unsigned{
-		x = __builtin_bswap32(x);
-		x = ((x & 0x0F0F0F0F) << 4) | ((x & 0xF0F0F0F0) >> 4);
-		x = ((x & 0x33333333) << 2) | ((x & 0xCCCCCCCC) >> 2);
-		x = ((x & 0x55555555) << 1) | ((x & 0xAAAAAAAA) >> 1);
-		return x;
-	};
-
-	auto bit_reverse64 = [](uint64_t x) -> uint64_t{
-		x = __builtin_bswap64(x);
-		x = ((x & 0x0F0F0F0F0F0F0F0FULL) << 4) | ((x & 0xF0F0F0F0F0F0F0F0ULL) >> 4);
-		x = ((x & 0x3333333333333333ULL) << 2) | ((x & 0xCCCCCCCCCCCCCCCCULL) >> 2);
-		x = ((x & 0x5555555555555555ULL) << 1) | ((x & 0xAAAAAAAAAAAAAAAAULL) >> 1);
-		return x;
-	};
-
-	auto encode = [&](unsigned x, unsigned y){
-		return bit_reverse64((bit_reverse32(x) >> 1) | ((bit_reverse32(y) >> 1) << 1)) >> 32;
-	};
-
-	auto mask4 = [](unsigned a4){
-		return (0b1111111011101000 >> (a4 & 15)) & 1;
-	};
-	auto mask8 = [&](unsigned a8){
-		return mask4(a8 & 0xF) | (mask4((a8 >> 1) & 0xF) << 1);
-	};
-
-	int2 shift = {3, -5};
-
-	for(unsigned ty = 0; ty < top_side; ++ty){
-		for(unsigned tx = 0; tx < top_side; ++tx){
-			unsigned in_base_x = tx * 4;
-			unsigned in_base_y = ty * 4;
-			unsigned tid = encode(tx, ty);
-
-			unsigned combined = 0;
-			for(unsigned my = 0; my < 2; ++my){
-				for(unsigned mx = 0; mx < 2; ++mx){
-					unsigned local_mask = 0;
-					for(unsigned j = 0; j < 4; ++j){
-						for(unsigned i = 0; i < 4; ++i){
-							unsigned x = (in_base_x + mx * 2 + i - shift.x + size_side) & (size_side - 1);
-							unsigned y = (in_base_y + my * 2 + j - shift.y + size_side) & (size_side - 1);
-							unsigned idx = encode(x, y);
-							unsigned val = get_val(h_input, idx);
-							local_mask |= (val & 1) << (j * 4 + i);
-						}
-					}
-					unsigned mid_val = mask8(local_mask);
-					h_mid[((ty * 2 + my) * mid_side + (tx * 2 + mx))] = mid_val;
-					combined |= (mid_val & 3) << ((my * 2 + mx) * 2);
-				}
-			}
-			h_top[tid] = mask8(combined);
-		}
-	}
-
-	dump2bit_grid(h_mid, "Mid");
-	dump2bit_grid(h_top, "Top");
-
-	// 3. Upload to GPU and launch kernel
-	uint64_t* d_input, * d_shift;
-	unsigned* d_mid, * d_top;
-	CHECK_CUDA(cudaMalloc(&d_input, total_words * sizeof(uint64_t)));
-	CHECK_CUDA(cudaMalloc(&d_shift, total_words * sizeof(uint64_t)));
-	CHECK_CUDA(cudaMalloc(&d_mid, mid_len * sizeof(unsigned)));
-	CHECK_CUDA(cudaMalloc(&d_top, top_len * sizeof(unsigned)));
-
-	CHECK_CUDA(cudaMemcpy(d_input, h_input.data(), total_words * sizeof(uint64_t), cudaMemcpyHostToDevice));
-	setSZ0toConstantMem(size_side);
-	reduct << <(top_len + 255) / 256, 256 >> > (d_input, d_shift, d_mid, d_top, shift);
-	CHECK_CUDA(cudaDeviceSynchronize());
-
-	std::vector<unsigned> gpu_top(top_len);
-	CHECK_CUDA(cudaMemcpy(gpu_top.data(), d_top, top_len * sizeof(unsigned), cudaMemcpyDeviceToHost));
-
-	CHECK_CUDA(cudaFree(d_input));
-	CHECK_CUDA(cudaFree(d_shift));
-	CHECK_CUDA(cudaFree(d_mid));
-	CHECK_CUDA(cudaFree(d_top));
-
-	// 4. Compare
-	int errors = 0;
-	for(unsigned i = 0; i < top_len; ++i){
-		if(gpu_top[i] != h_top[i]){
-			printf("Mismatch at %u: expected %u, got %u\n", i, h_top[i], gpu_top[i]);
-			if(++errors > 10) break;
-		}
-	}
-	printf("Test completed with %d mismatches\n", errors);
-	return errors;
-}
-
-int test_reduce_(unsigned size_side = 32){
 	srand(42);
 	const unsigned total_values = size_side * size_side;
 	const unsigned total_words = (total_values + 31) / 32;
