@@ -9,7 +9,7 @@
 #include <cassert>
 #include <chrono>
 #include <string>
-__host__ bool testreduct();
+__host__ bool testreduct(unsigned seed = 0);
 
 #define CHECK_CUDA(call) \
     do { \
@@ -435,7 +435,7 @@ int test_reduce(unsigned size_side = 32){
 int main(){
 	for(int j = 1; j < 100; j++){
 		if(!testreduct()){
-			printf("Error testreduct!");
+			printf("Step %d. Error testreduct!", j);
 			return -j;
 		}
 	}
