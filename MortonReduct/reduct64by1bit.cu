@@ -1,4 +1,4 @@
-#include <cuda_runtime.h>
+#include "common.h"
 #include <vector>
 
 __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){

@@ -1,4 +1,4 @@
-﻿#include <cuda_runtime.h>
+﻿#include "common.h"
 #include <cuda.h>
 //#include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
@@ -9,23 +9,10 @@
 #include <cassert>
 #include <chrono>
 #include <string>
-__host__ bool testreduct(unsigned seed = 0);
-
-#define CHECK_CUDA(call) \
-    do { \
-        cudaError_t err = (call); \
-        if (err != cudaSuccess) { \
-            std::cerr << "CUDA error: " << cudaGetErrorString(err) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
-            std::exit(EXIT_FAILURE); \
-        } \
-    } while (0)
 
 __constant__ unsigned SZ0;
-static void setSZ0toConstantMem(unsigned sz0){
-	CHECK_CUDA(cudaMemcpyToSymbol(static_cast<const void*>(&SZ0), &sz0, sizeof(sz0), 0, cudaMemcpyHostToDevice));
-}
 
-static __device__ __host__ __forceinline__ unsigned DecodeMorton2X(unsigned code){
+__device__ __host__ __forceinline__ unsigned DecodeMorton2X(unsigned code){
 	code &= 0x55555555;
 	code = (code ^ (code >> 1)) & 0x33333333;
 	code = (code ^ (code >> 2)) & 0x0F0F0F0F;
@@ -33,7 +20,7 @@ static __device__ __host__ __forceinline__ unsigned DecodeMorton2X(unsigned code
 	code = (code ^ (code >> 8)) & 0x0000FFFF;
 	return code;
 }
-static __device__ __host__ __forceinline__ unsigned DecodeMorton2Y(unsigned code){
+__device__ __host__ __forceinline__ unsigned DecodeMorton2Y(unsigned code){
 	code >>= 1;
 	code &= 0x55555555;
 	code = (code ^ (code >> 1)) & 0x33333333;
@@ -42,10 +29,10 @@ static __device__ __host__ __forceinline__ unsigned DecodeMorton2Y(unsigned code
 	code = (code ^ (code >> 8)) & 0x0000FFFF;
 	return code;
 }
-static __device__  __forceinline__ unsigned EncodeMorton2(unsigned x, unsigned y){
+__device__ __forceinline__ unsigned EncodeMorton2(unsigned x, unsigned y){
 	return __brevll(__brev(x) >> 1 | (__brev(y) >> 1) << 1) >> 32;
 }
-static __host__  __forceinline__ unsigned EncodeMorton2h(unsigned x, unsigned y){
+__host__  __forceinline__ unsigned EncodeMorton2h(unsigned x, unsigned y){
 	x &= 0x0000ffff;
 	y &= 0x0000ffff;
 	x = (x | (x << 8)) & 0x00FF00FF;
@@ -57,6 +44,10 @@ static __host__  __forceinline__ unsigned EncodeMorton2h(unsigned x, unsigned y)
 	x = (x | (x << 1)) & 0x55555555;
 	y = (y | (y << 1)) & 0x55555555;
 	return x | (y << 1);
+}
+
+static void setSZ0toConstantMem(unsigned sz0){
+	CHECK_CUDA(cudaMemcpyToSymbol(static_cast<const void*>(&SZ0), &sz0, sizeof(sz0), 0, cudaMemcpyHostToDevice));
 }
 
 static __device__ __host__ __forceinline__ unsigned get2bits64(const uint64_t* data, unsigned index){
