@@ -111,7 +111,31 @@ __device__ __forceinline__ unsigned getMask_8to2bit(unsigned a8){
 	unsigned val1 = getMask_4to1bit(((a8 >> 1) & 1) | ((a8 >> 2) & 2) | ((a8 >> 3) & 4) | ((a8 >> 4) & 8));
 	return val0 | (val1 << 1);
 }
+// ************************************************************************************
 
+__device__ void reduct64by1bit(const uint64_t* __restrict__ data_in,
+					   uint64_t* __restrict__ data_shift,
+					   const int2 shift){
+	const unsigned shift_id_word = blockIdx.x * blockDim.x + threadIdx.x; // data_shift index
+#pragma unroll
+	for(unsigned i = 0; i < 64; ++i){	// bits in word
+		const unsigned shift_morton_id = shift_id_word * 64 + i;
+		const unsigned shift_decart_x = DecodeMorton2X(shift_morton_id);
+		const unsigned shift_decart_y = DecodeMorton2Y(shift_morton_id);
+#ifdef _DEBUG
+		if(shift_decart_x >= SZ0){ printf("out of range x\n"); return; }
+		if(shift_decart_y >= SZ0){ printf("out of range y\n"); return; }
+#endif // _DEBUG
+		const unsigned in_decart_x = (shift_decart_x - shift.x + SZ0) & (SZ0 - 1);
+		const unsigned in_decart_y = (shift_decart_y - shift.y + SZ0) & (SZ0 - 1);
+
+		unsigned in_morton_id = EncodeMorton2(in_decart_x, in_decart_y);
+		unsigned val = get2bits64(data_in, in_idx);
+		unsigned out_idx = EncodeMorton2(in_base_x + i, in_base_y + j);
+		set2bits64(data_shift, out_idx, val);
+	}
+
+}// ************************************************************************************
 __global__ void reduct(const uint64_t* __restrict__ data_in,
 					   uint64_t* __restrict__ data_shift,
 					   unsigned* __restrict__ data_mid,
