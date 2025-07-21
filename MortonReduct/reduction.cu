@@ -1,7 +1,9 @@
-#include "common.h"
+//reduction.cu
+#include <cuda_runtime.h>
 #include <vector>
+__device__ void tstfunc3(){}
 
-__device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
+static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
 	// sum by 4 bit, if sum < 2 then 0 else 1
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
 	uint64_t sum = (src[0] & M) + ((src[0] >> 1) & M) + ((src[0] >> 2) & M) + ((src[0] >> 3) & M);

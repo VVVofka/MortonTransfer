@@ -111,6 +111,50 @@ __device__ __forceinline__ unsigned getMask_8to2bit(unsigned a8){
 	unsigned val1 = getMask_4to1bit(((a8 >> 1) & 1) | ((a8 >> 2) & 2) | ((a8 >> 3) & 4) | ((a8 >> 4) & 8));
 	return val0 | (val1 << 1);
 }
+// ***********************************************************************************************
+static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
+	// sum by 4 bit, if sum < 2 then 0 else 1
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum = (src[0] & M) + ((src[0] >> 1) & M) + ((src[0] >> 2) & M) + ((src[0] >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	//compact by mask: 0b0001'0001'0001'0001''0001'0001'0001'0001''0001'0001'0001'0001''0001'0001'0001'0001;
+	uint64_t dst =
+		((sum & 0x1000'0000'0000'0000) >> 45) | ((sum & 0x100'0000'0000'0000) >> 42) | ((sum & 0x10'0000'0000'0000) >> 39) | ((sum & 0x1'0000'0000'0000) >> 36) |
+		((sum & 0x1000'0000'0000) >> 33) | ((sum & 0x100'0000'0000) >> 30) | ((sum & 0x10'0000'0000) >> 27) | ((sum & 0x1'0000'0000) >> 24) |
+		((sum & 0x1000'0000) >> 21) | ((sum & 0x100'0000) >> 18) | ((sum & 0x10'0000) >> 15) | ((sum & 0x1'0000) >> 12) |
+		((sum & 0x1000) >> 9) | ((sum & 0x100) >> 6) | ((sum & 0x10) >> 3) | (sum & 0x1);
+
+	sum = (src[1] & M) + ((src[1] >> 1) & M) + ((src[1] >> 2) & M) + ((src[1] >> 3) & M);
+	sum |= sum >> 1;	// res in pos 1
+	//compact by mask: 0b0010'0010'0010'0010''0010'0010'0010'0010''0010'0010'0010'0010''0010'0010'0010'0010;
+	dst |=
+		((sum & 0x2000'0000'0000'0000) >> 30) | ((sum & 0x200'0000'0000'0000) >> 27) | ((sum & 0x20'0000'0000'0000) >> 24) | ((sum & 0x2'0000'0000'0000) >> 21) |
+		((sum & 0x2000'0000'0000) >> 18) | ((sum & 0x200'0000'0000) >> 15) | ((sum & 0x20'0000'0000) >> 12) | ((sum & 0x2'0000'0000) >> 9) |
+		((sum & 0x2000'0000) >> 6) | ((sum & 0x200'0000) >> 3) | (sum & 0x20'0000) | ((sum & 0x2'0000) << 3) |
+		((sum & 0x2000) << 6) | ((sum & 0x200) << 9) | ((sum & 0x20) << 12) | ((sum & 0x2) << 15);
+
+	sum = (src[2] & M) + ((src[2] >> 1) & M) + ((src[2] >> 2) & M) + ((src[2] >> 3) & M);
+	sum |= sum << 1;	// res in pos 2
+	//compact by mask: 0b0100'0100'0100'0100''0100'0100'0100'0100''0100'0100'0100'0100''0100'0100'0100'0100;
+	dst |=
+		((sum & 0x4000'0000'0000'0000) >> 15) | ((sum & 0x400'0000'0000'0000) >> 12) | ((sum & 0x40'0000'0000'0000) >> 9) | ((sum & 0x4'0000'0000'0000) >> 6) |
+		((sum & 0x4000'0000'0000) >> 3) | (sum & 0x400'0000'0000) | ((sum & 0x40'0000'0000) << 3) | ((sum & 0x4'0000'0000) << 6) |
+		((sum & 0x4000'0000) << 9) | ((sum & 0x400'0000) << 12) | ((sum & 0x40'0000) << 15) | ((sum & 0x4'0000) << 18) |
+		((sum & 0x4000) << 21) | ((sum & 0x400) << 24) | ((sum & 0x40) << 27) | ((sum & 0x4) << 30);
+
+	sum = (src[3] & M) + ((src[3] >> 1) & M) + ((src[3] >> 2) & M) + ((src[3] >> 3) & M);
+	sum <<= 1;
+	sum |= sum << 1;// res in pos 3
+	//compact by mask: 0b1000'1000'1000'1000''1000'1000'1000'1000''1000'1000'1000'1000''1000'1000'1000'1000;
+	dst |=
+		(sum & 0x8000'0000'0000'0000) | ((sum & 0x800'0000'0000'0000) << 3) | ((sum & 0x80'0000'0000'0000) << 6) | ((sum & 0x8'0000'0000'0000) << 9) |
+		((sum & 0x8000'0000'0000) << 12) | ((sum & 0x800'0000'0000) << 15) | ((sum & 0x80'0000'0000) << 18) | ((sum & 0x8'0000'0000) << 21) |
+		((sum & 0x8000'0000) << 24) | ((sum & 0x800'0000) << 27) | ((sum & 0x80'0000) << 30) | ((sum & 0x8'0000) << 33) |
+		((sum & 0x8000) << 36) | ((sum & 0x800) << 39) | ((sum & 0x80) << 42) | ((sum & 0x8) << 45);
+	return dst;
+} // ////////////////////////////////////////////////////////////////////////////////
 // ************************************************************************************
 
 __device__ void shift64by1bit(const uint64_t* __restrict__ data_in,
@@ -124,16 +168,41 @@ __device__ void shift64by1bit(const uint64_t* __restrict__ data_in,
 		const unsigned shift_decart_x = DecodeMorton2X(shift_morton_id);
 		const unsigned shift_decart_y = DecodeMorton2Y(shift_morton_id);
 #ifdef _DEBUG
-		if(shift_decart_x >= SZ0 || shift_decart_y >= SZ0){printf("out of range!\n"); return;}
+		if(shift_decart_x >= SZ0 || shift_decart_y >= SZ0){ printf("out of range!\n"); return; }
 #endif // _DEBUG
-		const unsigned in_decart_x = (shift_decart_x - shift.x + SZ0) & (SZ0 - 1);
-		const unsigned in_decart_y = (shift_decart_y - shift.y + SZ0) & (SZ0 - 1);
+		const unsigned in_decart_x = (shift_decart_x + SZ0 - shift.x) & (SZ0 - 1);
+		const unsigned in_decart_y = (shift_decart_y + SZ0 - shift.y) & (SZ0 - 1);
 
 		const unsigned in_morton_id = EncodeMorton2(in_decart_x, in_decart_y);
 		const unsigned val = (data_in[in_morton_id / 64] >> i) & 1;
 		new_shift_word = (new_shift_word & ~(1 << i)) | (val << i);
 	}
 	data_shift[shift_id_word] = new_shift_word;
+}// ************************************************************************************
+#include "reduction.h"
+//__device__ void tstfunc3();  // Предварительное объявление
+__device__ void tstfunc2(){}
+__device__ void tstfunc1(){
+	tstfunc2();
+	tstfunc3();
+}
+// Понижает длину стороны в 4 раза (площадь в 16)
+__device__ void reduct64by1bit_x2(const uint64_t* __restrict__ data_dn,
+							uint64_t* __restrict__ data_mid,
+							uint64_t* __restrict__ data_up){
+	const unsigned up_id_word = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned mid_id_word = up_id_word * 4;
+#pragma unroll
+	for(unsigned i = 0; i < 4; ++i){	// by dn word
+		const unsigned cur_mid_id_word = mid_id_word + i;
+		data_mid[cur_mid_id_word] = reduct64by1bit(data_dn + cur_mid_id_word * 4);
+	}
+	data_up[up_id_word] = reduct64by1bit(data_mid + mid_id_word);
+}// ************************************************************************************
+__device__ void reduct64by1bit_x2(const uint64_t* __restrict__ data_dn,
+							uint64_t* __restrict__ data_up){
+	uint64_t data_mid[4];
+	reduct64by1bit_x2(data_dn, data_mid, data_up);
 }// ************************************************************************************
 __global__ void reduct(const uint64_t* __restrict__ data_in,
 					   uint64_t* __restrict__ data_shift,
