@@ -1,17 +1,7 @@
 #include <cuda_runtime.h>
-#include <cuda.h>
 #include <vector>
 
-#define CHECK_CUDA(call) \
-    do { \
-        cudaError_t err = (call); \
-        if (err != cudaSuccess) { \
-            std::cerr << "CUDA error: " << cudaGetErrorString(err) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
-            std::exit(EXIT_FAILURE); \
-        } \
-    } while (0)
-
-__device__ __host__ __forceinline__ uint64_t reduct1bit(const uint64_t* __restrict__ src){
+__device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
 	// sum by 4 bit, if sum < 2 then 0 else 1
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
 	uint64_t sum = (src[0] & M) + ((src[0] >> 1) & M) + ((src[0] >> 2) & M) + ((src[0] >> 3) & M);
@@ -91,7 +81,7 @@ __host__ bool testreduct(unsigned seed){	// seed = 0
 	printf("in64:\n");
 	for(int j = 0; j < 4; j++) printf("%I64X\n", vin64[j]);
 
-	uint64_t out64_old = reduct1bit(vin64.data());
+	uint64_t out64_old = reduct64by1bit(vin64.data());
 	printf("old out64: %I64X\n", out64_old);
 
 //	uint64_t out64_new = reduct1bit_wo_lut(vin64.data());
@@ -108,6 +98,6 @@ __host__ bool testreduct(unsigned seed){	// seed = 0
 //			printf("Error new i=%d result=%d expect=%d\n", i, result_new, expect);
 		return false;
 	}
-	printf("Test reduct1bit() Ok\n");
+	printf("Test reduct64by1bit() Ok\n");
 	return true;
 }
