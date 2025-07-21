@@ -9,6 +9,7 @@
 #include <cassert>
 #include <chrono>
 #include <string>
+__host__ bool testreduct();
 
 #define CHECK_CUDA(call) \
     do { \
@@ -432,6 +433,14 @@ int test_reduce(unsigned size_side = 32){
 	return errors;
 }
 int main(){
+	for(int j = 1; j < 100; j++){
+		if(!testreduct()){
+			printf("Error testreduct!");
+			return -j;
+		}
+	}
+	printf("\ntestreduct Ok\n");
+	return 0;
 	auto start = std::chrono::high_resolution_clock::now();
 	int errors = test_reduce();
 	auto end = std::chrono::high_resolution_clock::now();
