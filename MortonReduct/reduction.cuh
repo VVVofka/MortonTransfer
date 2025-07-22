@@ -1,7 +1,7 @@
-//reduction.cu
+#pragma once
+//reduction.cuh
 #include <cuda_runtime.h>
 #include <vector>
-__device__ void tstfunc3(){}
 
 static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
 	// sum by 4 bit, if sum < 2 then 0 else 1
@@ -46,8 +46,27 @@ static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_
 		((sum & 0x8000) << 36) | ((sum & 0x800) << 39) | ((sum & 0x80) << 42) | ((sum & 0x8) << 45);
 	return dst;
 } // ////////////////////////////////////////////////////////////////////////////////
-__host__ bool testreduct(unsigned seed){	// seed = 0
-	if(seed) srand(seed);
+// ѕонижает длину стороны в 4 раза (площадь в 16)
+static __device__ __inline__ void reduct64by1bit_x2(const uint64_t* __restrict__ data_dn,
+							uint64_t* __restrict__ data_mid,
+							uint64_t* __restrict__ data_up){
+	const unsigned up_id_word = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned mid_id_word = up_id_word * 4;
+#pragma unroll
+	for(unsigned i = 0; i < 4; ++i){	// by dn word
+		const unsigned cur_mid_id_word = mid_id_word + i;
+		data_mid[cur_mid_id_word] = reduct64by1bit(data_dn + cur_mid_id_word * 4);
+	}
+	data_up[up_id_word] = reduct64by1bit(data_mid + mid_id_word);
+}// ************************************************************************************
+static __device__ __inline__ void reduct64by1bit_x2(const uint64_t* __restrict__ data_dn,
+							uint64_t* __restrict__ data_up){
+	uint64_t data_mid[4];
+	reduct64by1bit_x2(data_dn, data_mid, data_up);
+}// ************************************************************************************
+
+static __host__ bool testreduct(unsigned seed = 0){	// seed = 0
+	srand(seed? seed: time(0));
 	std::vector<int> vtstin(64 * 4);
 	for(int& i : vtstin) i = rand() & 1;
 	printf("vtstin:\n");
@@ -86,8 +105,8 @@ __host__ bool testreduct(unsigned seed){	// seed = 0
 	uint64_t out64_old = reduct64by1bit(vin64.data());
 	printf("old out64: %I64X\n", out64_old);
 
-//	uint64_t out64_new = reduct1bit_wo_lut(vin64.data());
-//	printf("new out64: %I64X\n", out64_new);
+	//	uint64_t out64_new = reduct1bit_wo_lut(vin64.data());
+	//	printf("new out64: %I64X\n", out64_new);
 
 	for(int i = 0; i < 64; i++){
 		int result_old = int((out64_old >> i) & 1);
@@ -96,8 +115,8 @@ __host__ bool testreduct(unsigned seed){	// seed = 0
 		if(result_old == expect /* && result_new == expect */) continue;
 		if(result_old != expect)
 			printf("Error old i=%d result=%d expect=%d\n", i, result_old, expect);
-//		if(result_new != expect)
-//			printf("Error new i=%d result=%d expect=%d\n", i, result_new, expect);
+		//		if(result_new != expect)
+		//			printf("Error new i=%d result=%d expect=%d\n", i, result_new, expect);
 		return false;
 	}
 	printf("Test reduct64by1bit() Ok\n");

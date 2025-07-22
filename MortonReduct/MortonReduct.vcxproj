@@ -83,22 +83,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
-    <CudaCompile Include="morton.cu">
-      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
-      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
-      <FastMath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</FastMath>
-      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
-    </CudaCompile>
-    <CudaCompile Include="reduction.cu">
-      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
-      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
-      <FastMath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</FastMath>
-      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
-    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="common.h" />
-    <ClInclude Include="reduction.h" />
+    <ClInclude Include="common.cuh" />
+    <ClInclude Include="morton.cuh" />
+    <ClInclude Include="reduction.cuh" />
+    <ClInclude Include="shift.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
