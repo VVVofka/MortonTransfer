@@ -83,15 +83,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="main1bit.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.cuh" />
     <ClInclude Include="constmem.cuh" />
+    <ClInclude Include="CudaArray.h" />
     <ClInclude Include="morton.cuh" />
     <ClInclude Include="reduction.cuh" />
     <ClInclude Include="shift.cuh" />
     <ClInclude Include="ShiftReduction.cuh" />
     <ClInclude Include="top.cuh" />
+    <ClInclude Include="tstShiftReduct.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

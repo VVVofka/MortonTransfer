@@ -17,14 +17,18 @@ static void setSZ0toConstantMem(unsigned sz0){
 template <typename T>
 static void loadKLay(const T* v, size_t cnt){
 	assert(cnt <= 16);
-	__half2 vh2[16];
-	for(size_t j = 0; j < cnt; j++)
-		vh2[j] = j < 16 ? __half2(__half(v[j]), __half(v[j])) : __half2(0, 0);
-	assert(sizeof(kLay) == sizeof(vh2));
-	CHECK_CUDA(cudaMemcpyToSymbol(kLay, vh2, sizeof(vh2), 0, cudaMemcpyHostToDevice));
+	__half2 host_kLay[16]{};
+	for(size_t j = 0; j < cnt; j++){
+		if(j < 16)
+			host_kLay[j] = __half2(float(v[j]), float(v[j]));
+		else
+			host_kLay[j] = __half2(0, 0);
+	}
+	assert(sizeof(kLay) == sizeof(host_kLay));
+	CHECK_CUDA(cudaMemcpyToSymbol(kLay, host_kLay, sizeof(host_kLay), 0, cudaMemcpyHostToDevice));
 }
 template <typename T>
-static void loadKLay(const std::vector<T>& v){ loadKLay(v.data(), v.size());}
+static void loadKLay(const std::vector<T>& v){ loadKLay(v.data(), v.size()); }
 
 
 template <typename T>
@@ -60,9 +64,9 @@ static void initConstantMemory(){
 		-1.0, -1.0, -1.0, -1.0	//1111
 	});
 	loadKLay<double>({
-		0.1, 0.2, 0.3, 0.4, 
-		0.5, 0.7, 0.9, 1.0, 
-		1.1, 1.2, 1.4, 1.5, 
+		0.1, 0.2, 0.3, 0.4,
+		0.5, 0.7, 0.9, 1.0,
+		1.1, 1.2, 1.4, 1.5,
 		2.0, 2.2, 2.4, 3.0
 	});
 }

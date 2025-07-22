@@ -2,8 +2,9 @@
 //shift.cuh
 #include "common.cuh"
 #include "morton.cuh"
+#include "constmem.cuh"
+
 #include <vector>
-extern __constant__ unsigned SZ0;
 static __device__ __inline__ uint64_t shift64by1bit(const uint64_t* __restrict__ data_in, 
 						unsigned id_morton, // blockIdx.x * blockDim.x + threadIdx.x
 						const int2& shift){
@@ -13,7 +14,7 @@ static __device__ __inline__ uint64_t shift64by1bit(const uint64_t* __restrict__
 		const unsigned shift_decart_x = DecodeMorton2X(id_morton);
 		const unsigned shift_decart_y = DecodeMorton2Y(id_morton);
 #ifdef _DEBUG
-		if(shift_decart_x >= SZ0 || shift_decart_y >= SZ0){ printf("out of range!\n"); return; }
+		if(shift_decart_x >= SZ0 || shift_decart_y >= SZ0){ printf("out of range!\n"); return 0; }
 #endif // _DEBUG
 		const unsigned in_decart_x = (shift_decart_x + SZ0 - shift.x) & (SZ0 - 1);
 		const unsigned in_decart_y = (shift_decart_y + SZ0 - shift.y) & (SZ0 - 1);

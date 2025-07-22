@@ -66,7 +66,7 @@ static __device__ __inline__ void reduct64by1bit_x2(const uint64_t* __restrict__
 }// ************************************************************************************
 
 static __host__ bool testreduct(unsigned seed = 0){	// seed = 0
-	srand(seed? seed: time(0));
+	srand(seed? seed: (unsigned)time(0));
 	std::vector<int> vtstin(64 * 4);
 	for(int& i : vtstin) i = rand() & 1;
 	printf("vtstin:\n");

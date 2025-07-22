@@ -10,6 +10,7 @@
 #include <string>
 #include "reduction.cuh"
 #include "morton.cuh"
+#include "constmem.cuh"
 
 
 static __device__ __host__ __forceinline__ unsigned get2bits64(const uint64_t* data, unsigned index){
@@ -384,7 +385,7 @@ int test_reduce(unsigned size_side = 32){
 	printf("Test completed with %d mismatches\n", errors);
 	return errors;
 }
-int main(){
+int main_(){
 	for(int j = 1; j < 100; j++){
 		if(!testreduct()){
 			printf("Step %d. Error testreduct!", j);
