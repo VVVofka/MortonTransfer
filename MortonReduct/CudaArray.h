@@ -30,8 +30,8 @@ public:
 	size_t copy_from(const std::vector<T>& v);
 
 	std::vector<T> get_vector();
-	std::string get_str(const std::string& sep = " ", bool reverse = false);
-	void print(const std::string& sep = " ", bool reverse = false);
+	std::string get_str(const std::string& sep = "", bool reverse = false);
+	void print(const std::string& caption = "", const std::string& sep = "", bool reverse = false);
 }; // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 template<typename T> void CudaArray<T>::clear(){
@@ -95,7 +95,9 @@ template<typename T> std::string CudaArray<T>::get_str(const std::string& sep, b
 	}
 	return s;
 } // /////////////////////////////////////////////////////////////////////////////////////////
-template<typename T> void CudaArray<T>::print(const std::string& sep, bool reverse){
-	printf("side:%u all:%zu\n%s",
+template<typename T> void CudaArray<T>::print(const std::string& caption, 
+											const std::string& sep, 
+											bool reverse){
+	printf("%s side:%u all:%zu\n%s", caption.c_str(),
 	   szside, szall, get_str(sep, reverse).c_str());
 } // /////////////////////////////////////////////////////////////////////////////////////////////

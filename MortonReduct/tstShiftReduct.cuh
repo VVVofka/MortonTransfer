@@ -22,6 +22,18 @@ int test01(){
 	fillrnd_1bit(lay_in.phost, lay_in.szall);
 
 	setSZ0toConstantMem(32);
+
+	uint64_t* pin = lay_in.pdevice;
+	uint64_t* pshift = lay_shift.pdevice;
+	uint64_t* pmid = lay_mid.pdevice;
+	uint64_t* ptop = lay_top.pdevice;
+	int2 shift{0,0};
+	lay_in.print("IN");
+	glShiftReduction62by1X4_mid<<<1,1>>>(pin, pshift, pmid, ptop, shift);
+	lay_shift.print("SHIFT");
+	lay_mid.print("MID");
+	lay_top.print("TOP");
+
 	return 0;
 }
 }
