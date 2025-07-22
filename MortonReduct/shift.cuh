@@ -21,6 +21,7 @@ static __device__ __inline__ uint64_t shift64by1bit(const uint64_t* __restrict__
 
 		const unsigned in_morton_id = EncodeMorton2(in_decart_x, in_decart_y);
 		const unsigned val = (data_in[in_morton_id / 64] >> i) & 1;
+		
 		ret = (ret & ~(1 << i)) | (val << i);
 		id_morton++;
 	}

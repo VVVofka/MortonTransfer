@@ -54,7 +54,7 @@ template<typename T> void CudaArray<T>::copy_from(size_t sz_side, const T* p_dat
 	if(cudaStatus == cudaSuccess)
 		copy2device();
 	else
-		fprintf(stderr, "cudaMalloc failed!");
+		fprintf(stderr, "copy_from: cudaMalloc failed!\n");
 } // //////////////////////////////////////////////////////////////////////////////////
 template<typename T> size_t CudaArray<T>::copy_from(const std::vector<T>& v){
 	const size_t sz_side = (size_t)sqrt((double)v.size());
@@ -67,14 +67,15 @@ template<typename T> T* CudaArray<T>::copy2host(){
 	cudaStatus = cudaMemcpy(phost, pdevice, sz_in_byte, cudaMemcpyDeviceToHost);
 	if(cudaStatus == cudaSuccess)
 		return phost;
-	fprintf(stderr, "cudaMemcpy failed!");
+	fprintf(stderr, "copy2host: cudaMemcpy failed!\n");
 	return nullptr;
 } // ///////////////////////////////////////////////////////////////////////////////////
 template<typename T> void CudaArray<T>::copy2device(T* p_host){
 	const T* p = p_host ? p_host : phost;
 	const size_t sz_in_byte = szInByte();
 	cudaStatus = cudaMemcpy(pdevice, p, sz_in_byte, cudaMemcpyHostToDevice);
-	if(cudaStatus != cudaSuccess) fprintf(stderr, "cudaMemcpy failed!");
+	if(cudaStatus != cudaSuccess) 
+		fprintf(stderr, "copy2device: cudaMemcpy failed!\n");
 } // ///////////////////////////////////////////////////////////////////////////////////
 template<typename T> std::vector<T> CudaArray<T>::get_vector(){
 	copy2host();
