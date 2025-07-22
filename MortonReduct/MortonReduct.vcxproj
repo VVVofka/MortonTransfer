@@ -86,9 +86,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.cuh" />
+    <ClInclude Include="constmem.cuh" />
     <ClInclude Include="morton.cuh" />
     <ClInclude Include="reduction.cuh" />
     <ClInclude Include="shift.cuh" />
+    <ClInclude Include="ShiftReduction.cuh" />
+    <ClInclude Include="top.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
