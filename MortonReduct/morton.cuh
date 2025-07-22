@@ -21,11 +21,7 @@ static __device__ __host__ __forceinline__ unsigned DecodeMorton2Y(unsigned code
 	return code;
 }
 
-static __device__ __forceinline__ unsigned EncodeMorton2(unsigned x, unsigned y){
-	return __brevll(__brev(x) >> 1 | (__brev(y) >> 1) << 1) >> 32;
-}
-
-static __host__  inline unsigned EncodeMorton2h(unsigned x, unsigned y){
+static __host__ __device__ __forceinline__ unsigned EncodeMorton2(unsigned x, unsigned y){
 	x &= 0x0000ffff;
 	y &= 0x0000ffff;
 	x = (x | (x << 8)) & 0x00FF00FF;

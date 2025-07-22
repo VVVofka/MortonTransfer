@@ -36,7 +36,7 @@ static void dump2bit_grid(const std::vector<uint64_t>& data, const char* title =
 	if(title) std::cout << "--- " << title << " ---\n";
 	for(unsigned y = 0; y < size_side; ++y){
 		for(unsigned x = 0; x < size_side; ++x){
-			unsigned idx_morton = EncodeMorton2h(x, y);
+			unsigned idx_morton = EncodeMorton2(x, y);
 			unsigned val = get2bits64(data.data(), idx_morton);
 			if(val)
 				std::cout << val << " ";
@@ -52,7 +52,7 @@ static void dump2bit_grid(const std::vector<uint32_t>& data, const char* title =
 	if(title) std::cout << "--- " << title << " ---\n";
 	for(unsigned y = 0; y < size_side; ++y){
 		for(unsigned x = 0; x < size_side; ++x){
-			unsigned idx_morton = EncodeMorton2h(x, y);
+			unsigned idx_morton = EncodeMorton2(x, y);
 			unsigned val = get2bits32(data.data(), idx_morton);
 			if(val)
 				std::cout << val << " ";

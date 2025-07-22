@@ -23,16 +23,17 @@ void dump_cudaar(CudaArray<uint64_t>& cudaar, const std::string& caption = ""){
 	std::vector<uint64_t> v = cudaar.get_vector();
 	for(unsigned y = 0; y < cudaar.szside * 8; y++){
 		if((y % 4) == 0 && y){
-			if((y % 16) == 0 && y)
+			if((y % 16) == 0)
 				for(unsigned z = 0; z < cudaar.szside * 10 - 1; z++)
 					printf("=");
 			printf("\n");
 		}
 		for(unsigned x = 0; x < cudaar.szside * 8; x++){
-			unsigned idmorton = EncodeMorton2h(x, y);
+			unsigned idmorton = EncodeMorton2(x, y);
+			//printf("y:%u x:%u id_mortn=%u\n", y, x, idmorton);
 			unsigned val = (v[idmorton / 64] >> (idmorton % 64)) & 1;
 			if((x % 4) == 0 && x){
-				if((x % 16) == 0 && x)
+				if((x % 16) == 0)
 					printf("|");
 				else
 					printf(" ");
@@ -55,16 +56,18 @@ int test01(){
 
 	setSZ0toConstantMem(32);
 
-	int2 shift{0,0};
+	int2 shift{-8,-4};
 	dump_cudaar(lay_in, "IN");
-	std::string capt_shift = "SHIFT before " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
-	dump_cudaar(lay_shift, capt_shift);
+
+	//std::string capt_shift0 = "SHIFT before " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
+	//dump_cudaar(lay_shift, capt_shift);
 	
 	glShiftReduction62by1X4_mid << <1, 1 >> > (lay_in.pdevice, lay_shift.pdevice, lay_mid.pdevice, lay_top.pdevice, shift);
 	CHECK_CUDA(cudaDeviceSynchronize());
 
-	capt_shift = "SHIFT after " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
-	dump_cudaar(lay_shift, capt_shift);
+	std::string capt_shift1 = "\nSHIFT after " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
+	dump_cudaar(lay_shift, capt_shift1);
+
 	dump_cudaar(lay_mid, "MID");
 	dump_cudaar(lay_top, "TOP");
 	return 0;
