@@ -11,12 +11,6 @@
 #include "reduction.cuh"
 #include "morton.cuh"
 
-__constant__ unsigned SZ0;
-
-
-static void setSZ0toConstantMem(unsigned sz0){
-	CHECK_CUDA(cudaMemcpyToSymbol(static_cast<const void*>(&SZ0), &sz0, sizeof(sz0), 0, cudaMemcpyHostToDevice));
-}
 
 static __device__ __host__ __forceinline__ unsigned get2bits64(const uint64_t* data, unsigned index){
 	unsigned word_index = index >> 5;
