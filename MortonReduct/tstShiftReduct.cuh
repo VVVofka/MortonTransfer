@@ -22,9 +22,10 @@ std::vector<uint64_t> fillrnd_1bit(unsigned sz_side){
 void dump2D_vhost(std::vector<uint64_t>& v, const std::string& caption = ""){
 	printf("%s\n", caption.c_str());
 	unsigned cntside = (unsigned)sqrt(double(v.size()));
-	for(unsigned y = 0; y < cntside * 8; y++){
-		if((y % 4) == 0 && y){
-			if((y % 16) == 0)
+	for(unsigned yr = 0; yr < cntside * 8; yr++){
+		unsigned y = cntside * 8 - yr - 1;
+		if((yr % 4) == 0 && yr){
+			if((yr % 16) == 0)
 				for(unsigned z = 0; z < cntside * 10 - 1; z++)
 					printf("=");
 			printf("\n");
@@ -58,9 +59,10 @@ void dump2D_uns64(uint64_t u, const std::string& caption = ""){
 template <typename T>
 void dump1D_uns64(T u, const std::string& caption = ""){
 	printf("%s\n", caption.c_str());
-	for(unsigned i = 0; i < sizeof(T) * 8; i++){
-		if((i % 4) == 0 && i){
-			if((i % 16) == 0)
+	for(T ir = 0; ir < sizeof(T) * 8; ir++){
+		T i = sizeof(T) * 8 - ir - 1;
+		if((ir % 4) == 0 && ir){
+			if((ir % 16) == 0)
 				printf(" | ");
 			else
 				printf(" ");
@@ -103,7 +105,7 @@ int tst_top(unsigned seed = 0){
 	srand(seed ? seed : (unsigned)time(0));
 
 	std::vector<uint64_t> vin = fillrnd_1bit(8);
-	vin[0] = 0x0000'0000'0000'0030;
+	vin[0] = 0x0FA0'0000'0007'C030;
 	dump2D_vhost(vin, "In");
 	dump1D_uns64(vin[0], "In");
 	__half2* pout = nullptr;
