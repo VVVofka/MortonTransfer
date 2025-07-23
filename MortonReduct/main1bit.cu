@@ -14,6 +14,9 @@
 
 
 int main(){
-	int ret = TST_ShiftReduce::test01();
+	int ret = 0;
+	//ret = TST_ShiftReduce::test01();
+	ret = TST_ShiftReduce::tst_top(123);
+
 	return ret;
 }

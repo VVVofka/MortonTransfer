@@ -4,8 +4,8 @@
 #include "constmem.cuh"
 #include <cuda_fp16.h>
 
-static __device__ __inline__ 
-void get_top(const uint64_t src, __half2* fout /* [16] */){
+static __device__ __host__ __inline__
+uint64_t get_top(const uint64_t src, __half2* fout /* [16] */, uint64_t& bot, uint64_t& mid){
 	// 64
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
 	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
@@ -24,5 +24,7 @@ void get_top(const uint64_t src, __half2* fout /* [16] */){
 		((sum1 & 0x0001'0000'0000) >> 30) |
 		((sum1 & 0x0001'0000'0000'0000) >> 45);
 
-
+	bot = sum0;
+	mid = sum1;
+	return sum2;
 }
