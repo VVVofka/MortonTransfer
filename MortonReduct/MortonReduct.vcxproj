@@ -89,7 +89,9 @@
     <ClInclude Include="common.cuh" />
     <ClInclude Include="constmem.cuh" />
     <ClInclude Include="CudaArray.h" />
+    <ClInclude Include="dumps.cuh" />
     <ClInclude Include="morton.cuh" />
+    <ClInclude Include="MortonHostModel.cuh" />
     <ClInclude Include="reduction.cuh" />
     <ClInclude Include="shift.cuh" />
     <ClInclude Include="ShiftReduction.cuh" />
