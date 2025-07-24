@@ -83,7 +83,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
-    <CudaCompile Include="main1bit.cu" />
+    <CudaCompile Include="main1bit.cu">
+      <FastMath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</FastMath>
+      <FastMath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</FastMath>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.cuh" />
@@ -94,7 +97,7 @@
     <ClInclude Include="MortonHostModel.cuh" />
     <ClInclude Include="reduction.cuh" />
     <ClInclude Include="shift.cuh" />
-    <ClInclude Include="ShiftReduction.cuh" />
+    <CudaCompile Include="ShiftReduction.cuh" />
     <ClInclude Include="top.cuh" />
     <ClInclude Include="tstShiftReduct.cuh" />
   </ItemGroup>
