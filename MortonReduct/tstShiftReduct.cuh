@@ -65,7 +65,6 @@ int tst_rnd_up(){
 	return 0;
 }// -------------------------------------------------------------------------------------------------------------
 int up_f(){
-
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(8);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 
@@ -125,7 +124,25 @@ int up_f(){
 		}
 	}
 
+	// device #########################################################
+	CudaArray<uint64_t> lay_in(vin64);
+	setSZ0toConstantMem(8);
+
+	int2 shift{-8,-4};
+	Dumps::dump2D_cudaar(lay_in, "IN");
+
+	//std::string capt_shift0 = "SHIFT before " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
+	//dump_cudaar(lay_shift, capt_shift);
+
+	glShiftReduction62by1X4_mid << <1, 1 >> > (lay_in.pdevice, lay_shift.pdevice, lay_mid.pdevice, lay_top.pdevice, shift);
+	CHECK_CUDA(cudaDeviceSynchronize());
+
+	std::string capt_shift1 = "\nSHIFT after " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
+	Dumps::dump2D_cudaar(lay_shift, capt_shift1);
+
+	Dumps::dump2D_cudaar(lay_mid, "MID");
+	Dumps::dump2D_cudaar(lay_top, "TOP");
+
 	return 0;
 }// -------------------------------------------------------------------------------------------------------------
-
 } // namespace TST_ShiftReduce{

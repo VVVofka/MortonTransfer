@@ -93,6 +93,8 @@
     <ClInclude Include="constmem.cuh" />
     <ClInclude Include="CudaArray.h" />
     <ClInclude Include="dumps.cuh" />
+    <ClInclude Include="Lay.h" />
+    <ClInclude Include="Lays.h" />
     <ClInclude Include="morton.cuh" />
     <ClInclude Include="MortonHostModel.cuh" />
     <ClInclude Include="reduction.cuh" />
@@ -100,6 +102,10 @@
     <CudaCompile Include="ShiftReduction.cuh" />
     <ClInclude Include="top.cuh" />
     <ClInclude Include="tstShiftReduct.cuh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Lay.cpp" />
+    <ClCompile Include="Lays.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
