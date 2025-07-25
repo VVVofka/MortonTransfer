@@ -127,9 +127,10 @@ int up_f(){
 	}
 	// ####### Lays  ########################################################
 	using namespace LAYs;
-	Lays lays;
-	
-
+	Lays lays(3, MortonHostModel::kLay, MortonHostModel::vkF().data());
+	vector<double> vf0 = *lays.run(vini);
+	assert(f_3 == vf0);
+	return 0;
 	// device #########################################################
 	CudaArray<uint64_t> lay_in(vin64);
 	setSZ0toConstantMem(8);
