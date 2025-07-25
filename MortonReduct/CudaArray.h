@@ -36,7 +36,7 @@ public:
 
 template<typename T> void CudaArray<T>::clear(){
 	if(phost) delete[] phost;
-	if(pdevice) 
+	if(pdevice)
 		cudaStatus = cudaFree(pdevice);
 	phost = pdevice = nullptr;
 	szall = szside = 0;
@@ -49,13 +49,31 @@ template<typename T> void CudaArray<T>::copy_from(size_t sz_side, const T* p_dat
 	if(p_data)
 		for(size_t j = 0; j < szall; j++) phost[j] = p_data[j];
 	else
-		for(size_t j = 0; j < szall; j++) phost[j] = 0;
+		for(size_t j = 0; j < szall; j++) phost[j] = T(0);
 	cudaStatus = cudaMalloc((void**)&pdevice, szall * sizeof(T));
 	if(cudaStatus == cudaSuccess)
 		copy2device();
 	else
 		fprintf(stderr, "copy_from: cudaMalloc failed!\n");
 } // //////////////////////////////////////////////////////////////////////////////////
+// Специализация для __half2
+template<> void CudaArray<__half2>::copy_from(size_t sz_side, const __half2* p_data){
+	clear();
+	szside = (unsigned)sz_side;
+	szall = sz_side * sz_side;
+	phost = new __half2[szall];
+
+	if(p_data)
+		for(size_t j = 0; j < szall; j++) phost[j] = p_data[j];
+	else
+		for(size_t j = 0; j < szall; j++) phost[j] = __float2half2_rn(0.0f); // Инициализация нулями
+
+	cudaStatus = cudaMalloc((void**)&pdevice, szall * sizeof(__half2));
+	if(cudaStatus == cudaSuccess)
+		copy2device();
+	else
+		fprintf(stderr, "copy_from: cudaMalloc failed!\n");
+}
 template<typename T> size_t CudaArray<T>::copy_from(const std::vector<T>& v){
 	const size_t sz_side = (size_t)sqrt((double)v.size());
 	assert(sz_side * sz_side == v.size());
@@ -74,7 +92,7 @@ template<typename T> void CudaArray<T>::copy2device(T* p_host){
 	const T* p = p_host ? p_host : phost;
 	const size_t sz_in_byte = szInByte();
 	cudaStatus = cudaMemcpy(pdevice, p, sz_in_byte, cudaMemcpyHostToDevice);
-	if(cudaStatus != cudaSuccess) 
+	if(cudaStatus != cudaSuccess)
 		fprintf(stderr, "copy2device: cudaMemcpy failed!\n");
 } // ///////////////////////////////////////////////////////////////////////////////////
 template<typename T> std::vector<T> CudaArray<T>::get_vector(){
@@ -96,8 +114,8 @@ template<typename T> std::string CudaArray<T>::get_str(const std::string& sep, b
 	}
 	return s;
 } // /////////////////////////////////////////////////////////////////////////////////////////
-template<typename T> void CudaArray<T>::print(const std::string& caption, 
-											const std::string& sep, 
+template<typename T> void CudaArray<T>::print(const std::string& caption,
+											const std::string& sep,
 											bool reverse){
 	printf("%s side:%u all:%zu\n%s", caption.c_str(),
 	   szside, szall, get_str(sep, reverse).c_str());

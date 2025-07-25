@@ -132,11 +132,14 @@ int up_f(){
 	assert(f_3 == vf0);
 	return 0;
 	// device #########################################################
-	CudaArray<uint64_t> lay_in(vin64);
+	CudaArray<uint64_t> data_a_in(vin64);
+	CudaArray<__half2> data_f_out(32);
 	setSZ0toConstantMem(8);
 
-	int2 shift{-8,-4};
-	Dumps::dump2D_cudaar(lay_in, "IN");
+	//int2 shift{-8,-4};
+	Dumps::dump2D_cudaar(data_a_in, "IN CUDA: ");
+
+	glTop1<<<1,1>>>(data_a_in.pdevice, data_f_out.pdevice);
 
 	//std::string capt_shift0 = "SHIFT before " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
 	//dump_cudaar(lay_shift, capt_shift);
