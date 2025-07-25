@@ -3,7 +3,7 @@ using std::vector;
 namespace LAYs{
 
 // ---------------------------------------------------------------------------------------------
-void Lays::create(int cnt_lays, double* p_klay, double* p_kf){
+void Lays::create(int cnt_lays, const double* p_klay, const double* p_kf){
 	vlays = std::vector<Lay>(cnt_lays);
 	vector<int>* pnext = nullptr;
 	for(size_t nlay = 0; nlay < vlays.size(); nlay++){
