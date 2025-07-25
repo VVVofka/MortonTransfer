@@ -7,6 +7,6 @@ public:
 	std::vector<Lay> vlays;
 
 	void create(int cnt_lays);
-	std::vector<double>* run(const std::vector<double>* data_in);
+	std::vector<double>* run(const std::vector<int>* data_in);
 };
 

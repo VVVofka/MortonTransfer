@@ -13,7 +13,19 @@ void Lays::create(int cnt_lays){
 		pnext = &lay.va_dn;
 	}
 } // ---------------------------------------------------------------------------------------------
-std::vector<double>* Lays::run(const std::vector<double>* data_in){
-	
-	return nullptr;
+std::vector<double>* Lays::run(const vector<int>* data_in){
+	int nlay = 0;
+	Lay& lay = vlays[nlay];
+	lay.load(data_in);
+	while(nlay < (int)vlays.size()){
+		lay = vlays[nlay];
+		lay.run_up();
+		nlay++;
+	}
+	vector<double>* pfup = nullptr;
+	while(--nlay >= 0){
+		lay = vlays[nlay];
+		pfup = lay.run_dn(pfup);
+	}
+	return pfup;
 } // ---------------------------------------------------------------------------------------------

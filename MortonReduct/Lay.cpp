@@ -1,12 +1,18 @@
 #include "Lay.h"
+#include <cassert>
 using std::vector;
 
 void Lay::create(size_t N_, std::vector<int>* p_vaup){
 	N = N_;
 	pvaup = p_vaup;
-	const size_t sz_dn = 4ul << (N * 2);
+	const size_t sz_dn = 4ull << (N * 2ull);
 	va_dn = vector<int>(sz_dn);
 	vf_dn = vector<double>(sz_dn);
+} // ---------------------------------------------------------------------------------------------
+std::vector<int>* Lay::load(const std::vector<int>* pdata_in){
+	assert(pdata_in->size() == va_dn.size());
+	va_dn = *pdata_in;
+	return &va_dn;
 } // ---------------------------------------------------------------------------------------------
 void Lay::run_up(){
 	if(pvaup == nullptr) return;
