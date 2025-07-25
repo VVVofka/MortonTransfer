@@ -4,7 +4,7 @@ using std::vector;
 void Lay::create(size_t N_, std::vector<int>* p_vaup){
 	N = N_;
 	pvaup = p_vaup;
-	const size_t sz_dn = 4 << (N * 2);
+	const size_t sz_dn = 4ul << (N * 2);
 	va_dn = vector<int>(sz_dn);
 	vf_dn = vector<double>(sz_dn);
 } // ---------------------------------------------------------------------------------------------
@@ -33,4 +33,5 @@ vector<double>* Lay::run_dn(const vector<double>* pvfup){
 		for(size_t n = 0; n < 4; n++)
 			vf_dn[n] = pkF[n] * (*pvKLays)[N];
 	}
+	return &vf_dn;
 } // ---------------------------------------------------------------------------------------------
