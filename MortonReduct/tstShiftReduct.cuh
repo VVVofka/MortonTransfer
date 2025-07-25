@@ -9,6 +9,8 @@
 #include "dumps.cuh"
 #include "MortonHostModel.cuh"
 #include <array>
+#include "Lays.h"
+using std::vector;
 namespace TST_ShiftReduce{
 // -------------------------------------------------------------------------------------------------------------
 int test01(){
@@ -123,6 +125,9 @@ int up_f(){
 				f_3[j * 16 + i * 4 + k] = f_2[j * 4 + i][k];
 		}
 	}
+	// ####### Lays  ########################################################
+	using namespace LAYs;
+	Lays lays;
 
 	// device #########################################################
 	CudaArray<uint64_t> lay_in(vin64);

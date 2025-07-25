@@ -1,15 +1,14 @@
 #include "Lays.h"
 using std::vector;
+namespace LAYs{
 
-vector<double>* Lay::pvKLays = nullptr;
-vector<double>* Lay::pvkF = nullptr;
 // ---------------------------------------------------------------------------------------------
-void Lays::create(int cnt_lays){
+void Lays::create(int cnt_lays, double* p_klay, double* p_kf){
 	vlays = std::vector<Lay>(cnt_lays);
 	vector<int>* pnext = nullptr;
-	for(size_t j = 0; j < vlays.size(); j++){
-		Lay& lay = vlays[j];
-		lay.create(j, pnext);
+	for(size_t nlay = 0; nlay < vlays.size(); nlay++){
+		Lay& lay = vlays[nlay];
+		lay.create(nlay, pnext, p_klay[nlay], p_kf);
 		pnext = &lay.va_dn;
 	}
 } // ---------------------------------------------------------------------------------------------
@@ -29,3 +28,4 @@ std::vector<double>* Lays::run(const vector<int>* data_in){
 	}
 	return pfup;
 } // ---------------------------------------------------------------------------------------------
+}

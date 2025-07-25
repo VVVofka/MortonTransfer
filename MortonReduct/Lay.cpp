@@ -1,13 +1,17 @@
 #include "Lay.h"
 #include <cassert>
 using std::vector;
+namespace LAYs{
 
-void Lay::create(size_t N_, std::vector<int>* p_vaup){
+void Lay::create(size_t N_, std::vector<int>* p_vaup, double k_lay, const double* p_kf){
 	N = N_;
 	pvaup = p_vaup;
+	kLay = k_lay;
 	const size_t sz_dn = 4ull << (N * 2ull);
 	va_dn = vector<int>(sz_dn);
 	vf_dn = vector<double>(sz_dn);
+	for(int j = 0; j < 64; j++)
+		pkF[j] = p_kf[j];
 } // ---------------------------------------------------------------------------------------------
 std::vector<int>* Lay::load(const std::vector<int>* pdata_in){
 	assert(pdata_in->size() == va_dn.size());
@@ -28,16 +32,17 @@ vector<double>* Lay::run_dn(const vector<double>* pvfup){
 		for(size_t j_up = 0; j_up < pvfup->size(); j_up++){
 			const int* padn = va_dn.data() + j_up * 4;
 			const size_t mask = padn[0] + (padn[1] << 1) + (padn[2] << 2) + (padn[3] << 3);
-			const double* pkF = pvkF->data() + mask * 4;
+			const double* pkf4 = pkF + mask * 4;
 			const double fup = (*pvfup)[j_up];
 			for(size_t n = 0; n < 4; n++)
-				vf_dn[j_up * 4 + n] = fup + pkF[n] * (*pvKLays)[N];
+				vf_dn[j_up * 4 + n] = fup + pkf4[n] * kLay;
 		}
 	} else{
 		const size_t mask = va_dn[0] + (va_dn[1] << 1) + (va_dn[2] << 2) + (va_dn[3] << 3);
-		const double* pkF = pvkF->data() + mask * 4;
+		const double* pkf4 = pkF + mask * 4;
 		for(size_t n = 0; n < 4; n++)
-			vf_dn[n] = pkF[n] * (*pvKLays)[N];
+			vf_dn[n] = pkf4[n] * kLay;
 	}
 	return &vf_dn;
 } // ---------------------------------------------------------------------------------------------
+}
