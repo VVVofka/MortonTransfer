@@ -9,6 +9,7 @@
 #include "dumps.cuh"
 #include "MortonHostModel.cuh"
 #include <array>
+#include <iostream>
 #include "Lays.h"
 using std::vector;
 namespace TST_ShiftReduce{
@@ -20,7 +21,7 @@ int test01(){
 	CudaArray<uint64_t> lay_mid(2);
 	CudaArray<uint64_t> lay_top(1);
 
-	setSZ0toConstantMem(32);
+	ConstMem::setSZ0(32);
 
 	int2 shift{-8,-4};
 	Dumps::dump2D_cudaar(lay_in, "IN");
@@ -86,8 +87,11 @@ int up_f(){
 		vklays[j] = MortonHostModel::Ar4(MortonHostModel::kLay[j], 4);
 
 	Dumps::dump1D_uns64(resd4, "Top ");
+	printf("0x%016llX\n", resd4);
 	Dumps::dump1D_uns64(resd16, "Sec ");
+	printf("0x%016llX\n", resd16);
 	Dumps::dump1D_uns64(in64, "In: ");
+	printf("0x%016llX\n", in64);
 
 	MortonHostModel::Ar4 kf_0 = MortonHostModel::kF(resd4);
 	printf("kLay0: %.2f\n", vklays[0][0]);
@@ -130,29 +134,24 @@ int up_f(){
 	Lays lays(3, MortonHostModel::kLay, MortonHostModel::vkF().data());
 	vector<double> vf0 = *lays.run(vini);
 	assert(f_3 == vf0);
-	return 0;
 	// device #########################################################
 	CudaArray<uint64_t> data_a_in(vin64);
-	CudaArray<__half2> data_f_out(32);
-	setSZ0toConstantMem(8);
-
+	CudaArray<__half2> data_f_out(8);
+	ConstMem::setSZ0(8);
+	ConstMem::loadKLay(MortonHostModel::kLay, sizeof(MortonHostModel::kLay) / sizeof(MortonHostModel::kLay[0]));
+	ConstMem::loadKF4(MortonHostModel::vkF());
 	//int2 shift{-8,-4};
 	Dumps::dump2D_cudaar(data_a_in, "IN CUDA: ");
 
-	glTop1<<<1,1>>>(data_a_in.pdevice, data_f_out.pdevice);
-
-	//std::string capt_shift0 = "SHIFT before " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
-	//dump_cudaar(lay_shift, capt_shift);
-
-	//glShiftReduction62by1X4_mid << <1, 1 >> > (lay_in.pdevice, lay_shift.pdevice, lay_mid.pdevice, lay_top.pdevice, shift);
-	//CHECK_CUDA(cudaDeviceSynchronize());
-
-	//std::string capt_shift1 = "\nSHIFT after " + std::to_string(shift.x) + "*" + std::to_string(shift.y);
-	//Dumps::dump2D_cudaar(lay_shift, capt_shift1);
-
-	//Dumps::dump2D_cudaar(lay_mid, "MID");
-	//Dumps::dump2D_cudaar(lay_top, "TOP");
-
-	return 0;
+	//glTop1N<3><<<1,1>>>(data_a_in.pdevice, data_f_out.pdevice);
+	glTop1 << <1, 64 >> > (data_a_in.pdevice, data_f_out.pdevice);
+	CHECK_CUDA(cudaDeviceSynchronize());
+	data_f_out.copy2host();
+	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
+	if(Compare::vectors(vhout, f_3)){
+		printf("\nup_f() Ok!\n");
+		return 0;
+	}
+	return -1;
 }// -------------------------------------------------------------------------------------------------------------
 } // namespace TST_ShiftReduce{

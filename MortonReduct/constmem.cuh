@@ -9,13 +9,11 @@ __constant__ __half kF4[16 * 4];
 __constant__ __half2 kLay[16];
 __constant__ unsigned SZ0;
 
-
-static void setSZ0toConstantMem(unsigned sz0){
+namespace ConstMem{
+static void setSZ0(unsigned sz0){
 	CHECK_CUDA(cudaMemcpyToSymbol(static_cast<const void*>(&SZ0), &sz0, sizeof(sz0), 0, cudaMemcpyHostToDevice));
-}
-
-template <typename T>
-static void loadKLay(const T* v, size_t cnt){
+} // --------------------------------------------------------------------------------------------------------------
+template <typename T> static void loadKLay(const T* v, size_t cnt){
 	assert(cnt <= 16);
 	__half2 host_kLay[16]{};
 	for(size_t j = 0; j < cnt; j++){
@@ -26,24 +24,21 @@ static void loadKLay(const T* v, size_t cnt){
 	}
 	assert(sizeof(kLay) == sizeof(host_kLay));
 	CHECK_CUDA(cudaMemcpyToSymbol(kLay, host_kLay, sizeof(host_kLay), 0, cudaMemcpyHostToDevice));
-}
-template <typename T>
-static void loadKLay(const std::vector<T>& v){ loadKLay(v.data(), v.size()); }
-
-
-template <typename T>
-static void loadKF4(const T* v, size_t cnt){
+} // --------------------------------------------------------------------------------------------------------------
+template <typename T> static void loadKLay(const std::vector<T>& v){
+	loadKLay(v.data(), v.size());
+}// --------------------------------------------------------------------------------------------------------------
+template <typename T> static void loadKF4(const T* v, size_t cnt){
 	assert(cnt <= 16 * 4);
 	__half vh[16 * 4];
 	for(size_t j = 0; j < cnt; j++)
 		vh[j] = (j < 16 * 4) ? __half(v[j]) : __half(0);
 	assert(sizeof(kF4) == sizeof(vh));
 	CHECK_CUDA(cudaMemcpyToSymbol(kF4, vh, sizeof(vh), 0, cudaMemcpyHostToDevice));
-}
-template <typename T>
-static void loadKF4(const std::vector<T>& v){ loadKF4(v.data(), v.size()); }
-
-
+} // --------------------------------------------------------------------------------------------------------------
+template <typename T> static void loadKF4(const std::vector<T>& v){
+	loadKF4(v.data(), v.size());
+} // --------------------------------------------------------------------------------------------------------------
 static void initConstantMemory(){
 	loadKF4<double>({
 		-1.0, -1.0, -1.0, -1.0,	//0000
@@ -69,4 +64,5 @@ static void initConstantMemory(){
 		1.1, 1.2, 1.4, 1.5,
 		2.0, 2.2, 2.4, 3.0
 	});
+} // --------------------------------------------------------------------------------------------------------------
 }

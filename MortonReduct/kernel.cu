@@ -250,7 +250,7 @@ __host__ uint64_t bit_reverse64(uint64_t x){
 //	CHECK_CUDA(cudaMalloc(&d_top, top_len * sizeof(unsigned)));
 //
 //	CHECK_CUDA(cudaMemcpy(d_input, h_input.data(), total_words * sizeof(uint64_t), cudaMemcpyHostToDevice));
-//	setSZ0toConstantMem(size_side);
+//	setSZ0(size_side);
 //	reduct << <(top_len + 255) / 256, 256 >> > (d_input, d_shift, d_mid, d_top, shift);
 //	CHECK_CUDA(cudaDeviceSynchronize());
 //
@@ -362,7 +362,7 @@ int test_reduce(unsigned size_side = 32){
 	CHECK_CUDA(cudaMalloc(&d_top, top_len * sizeof(unsigned)));
 
 	CHECK_CUDA(cudaMemcpy(d_input, h_input.data(), total_words * sizeof(uint64_t), cudaMemcpyHostToDevice));
-	setSZ0toConstantMem(size_side);
+	ConstMem::setSZ0(size_side);
 	reduct << <(top_len + 255) / 256, 256 >> > (d_input, d_shift, d_mid, d_top, shift);
 	CHECK_CUDA(cudaDeviceSynchronize());
 

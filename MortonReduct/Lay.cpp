@@ -12,7 +12,7 @@ void Lay::create(size_t N_, std::vector<int>* p_vaup, double k_lay, const double
 	vf_dn = vector<double>(sz_dn * sz_dn);
 	for(int j = 0; j < 64; j++)
 		pkF[j] = p_kf[j];
-	printf("N:%zu szSide:%zu szDn:%zu\n", N, sz_dn, va_dn.size());
+	//printf("N:%zu szSide:%zu szDn:%zu\n", N, sz_dn, va_dn.size());
 } // ---------------------------------------------------------------------------------------------
 std::vector<int>* Lay::load(const std::vector<int>& pdata_in){
 	assert(pdata_in.size() == va_dn.size());
