@@ -89,11 +89,11 @@ int up_f(){
 		vklays[j] = MortonHostModel::Ar4(MortonHostModel::kLay[j], 4);
 
 	Dumps::dump1D_uns64(resd4, "Top ");
-	printf("0x%016llX\n", resd4);
+	printf("0x%016llX %zu\n", resd4, resd4);
 	Dumps::dump1D_uns64(resd16, "Sec ");
-	printf("0x%016llX\n", resd16);
+	printf("0x%016llX %zu\n", resd16, resd16);
 	Dumps::dump1D_uns64(in64, "In: ");
-	printf("0x%016llX\n", in64);
+	printf("0x%016llX %zu\n", in64, in64);
 
 	MortonHostModel::Ar4 kf_0 = MortonHostModel::kF(resd4);
 	printf("kLay0: %.2f\n", vklays[0][0]);
@@ -103,12 +103,13 @@ int up_f(){
 
 	MortonHostModel::Ar4 f_1[4];
 	MortonHostModel::Ar4 f_2[16];
-	std::vector<double> f_3(64);
+	std::vector<double> vf_res_handwork(64);
 	printf("\nkLay1: %.2f\n", vklays[1][0]);
 	for(int j = 0; j < 4; j++){
 		printf("\nj_lay1 = %d\n", j);
 		uint64_t a1 = (resd16 >> (j * 4)) & 0xF;
 		Dumps::dump1D_uns64(a1, "a1: ");
+		printf("a1: 0x%016llX %zu\n", a1, a1);
 
 		MortonHostModel::Ar4 kf_1 = MortonHostModel::kF(a1);
 		Dumps::dumpAr4(kf_1, "kf_1: ");
@@ -121,6 +122,7 @@ int up_f(){
 			printf("i_lay2 = %d\n", i);
 			uint64_t a2 = (in64 >> (j * 16 + i * 4)) & 0xF;
 			Dumps::dump1D_uns64(a2, "a2: ");
+			printf("a2: 0x%016llX %zu\n", a2, a2);
 
 			MortonHostModel::Ar4 kf_2 = MortonHostModel::kF(a2);
 			Dumps::dumpAr4(kf_2, "kf_2: ");
@@ -128,15 +130,19 @@ int up_f(){
 			printf("fup_lay2 = %.2f\n", fup_2[0]);
 			f_2[j * 4 + i] = kf_2 * vklays[2] + fup_2;
 			Dumps::dumpAr4(f_2[j * 4 + i], "f_2[j*4+i] = kf_2 * vklays[2] + fup_2: ");
-			for(int k = 0; k < 4; k++)
-				f_3[j * 16 + i * 4 + k] = f_2[j * 4 + i][k];
+			for(size_t k = 0; k < 4; k++)
+				vf_res_handwork[j * 16 + i * 4 + k] = f_2[j * 4 + i][k];
 		}
 	}
+	Dumps::VDouble(vf_res_handwork, 8, "vf_res_handwork:");
 	// ####### Lays  ########################################################
 	using namespace LAYs;
 	Lays lays(3, MortonHostModel::kLay, MortonHostModel::vkF().data());
-	vector<double> vf0 = *lays.run(vini);
-	assert(f_3 == vf0);
+	vector<double> vf_res_lays = *lays.run(vini);
+	Dumps::VDouble(vf_res_lays, 8, "vf_res_lays:");
+	if(Compare::vectors(vf_res_handwork, vf_res_lays) == false){
+		return -1;
+	}
 	// device #########################################################
 	CudaArray<uint64_t> data_a_in(vin64);
 	CudaArrayD1<__half2> data_f_out(64 / 2);
@@ -151,9 +157,8 @@ int up_f(){
 	CHECK_CUDA(cudaDeviceSynchronize());
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
-	Dumps::VDouble(f_3, 8, "f_3:");
 	Dumps::VDouble(vhout, 8, "vhout:");
-	if(Compare::vectors(vhout, f_3)){
+	if(Compare::vectors(vf_res_handwork, vhout, 0.001)){
 		printf("\nup_f() Ok!\n");
 		return 0;
 	}

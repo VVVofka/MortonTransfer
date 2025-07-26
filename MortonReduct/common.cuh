@@ -25,9 +25,13 @@ template <typename T> std::vector<T> VectorHalf2ToVector(const std::vector<__hal
 } // --------------------------------------------------------------------------------------------------------------
 template <typename T> std::vector<T> VectorHalf2ToVector(const __half2* pvh2, size_t sz){
 	std::vector<T> ret(sz * 2);
-	const __half* p = reinterpret_cast<const __half*>(pvh2);
-	for(size_t j = 0; j < ret.size(); j++)
-		ret[j] = T(p[j]);
+	for(size_t j = 0; j < sz; j++){
+		const __half2 h2 = pvh2[j];
+		float x = __half2float(h2.x);
+		float y = __half2float(h2.y);
+		ret[j * 2] = T(x);
+		ret[j * 2 + 1] = T(y);
+	}
 	return ret;
 } // --------------------------------------------------------------------------------------------------------------
 }
@@ -38,11 +42,14 @@ bool vectors(const std::vector<TA>& va, const std::vector<TB>& vb, double epsilo
 		printf("Different sizes!\n");
 		return false;
 	}
-	for(size_t j = 0; j < va.size(); j++)
-		if(abs(va[j] - vb[j]) > epsilon){
-			printf("Different items %zu!\n", j);
+	for(size_t j = 0; j < va.size(); j++){
+		double a = double(va[j]);
+		double b = double(vb[j]);
+		if(abs(a - b) > epsilon){
+			printf("Different items %zu! a:%f b:%f\n", j, a, b);
 			return false;
 		}
+	}
 	return true;
 }
 }
