@@ -34,7 +34,7 @@ static __device__ __host__ __inline__ void get_topA4A16(const uint64_t src, uint
 // 32 thread: in_val[1] out[16]
 static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
 	__shared__ uint64_t src, a4, a16;
-	__shared__ __half2 f0[2], f1[8];
+	__shared__ __half2 f0[2], f1[8], f2[32];	// TODO f2 del
 
 	if(threadIdx.x == 0){
 		src = in_val[0];
@@ -42,15 +42,15 @@ static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __re
 	}
 	__syncthreads();	// __syncwarp();
 
-	if(threadIdx.x < 8){
+	if(threadIdx.x < 2){
 		const __half* pkf_1 = &kF4[a4 * 4];
 		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
-		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];	//if(threadIdx.x < 2)!
+		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
 	}
 	__syncthreads();	// __syncwarp();
 
 	if(threadIdx.x < 8){
-		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 4))) & 0xF;	// (threadIdx.x / 8)=[0..3]
+		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 2))) & 0xF;	// (threadIdx.x / 8)=[0..3]
 		const __half* pkf_2 = &kF4[a_2 * 4];	// size=4
 		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);	// size=2
 		const __half2 kf = pkf2_2[threadIdx.x & 1];
@@ -59,13 +59,14 @@ static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __re
 	}
 	__syncthreads();	// __syncwarp();
 	const uint64_t a64 = src;	// 64
-	const uint64_t shift = 4 * (threadIdx.x / 2);
-	const uint64_t a_3 = (a64 >> shift) & 0xF;	// (threadIdx.x / 2)=[0..15]
+	const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 2))) & 0xF;	// (threadIdx.x / 2)=[0..15]
 	const __half* pkf_3 = &kF4[a_3 * 4];	// size=4
 	const __half2* pkf2_3 = reinterpret_cast<const __half2*>(pkf_3);	// size=2
 	const __half2 kf = pkf2_3[threadIdx.x & 1];
 	const __half fup = (reinterpret_cast<__half*>(f1))[threadIdx.x / 2];
 	const __half2 res_3 = __half2half2(fup) + kf * kLay[2];
+	f2[threadIdx.x] = res_3;
+	__syncthreads();	// __syncwarp();
 	out[threadIdx.x] = res_3;
 }// ----------------------------------------------------------------------------------------------
 /*
