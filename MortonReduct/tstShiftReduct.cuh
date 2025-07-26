@@ -70,7 +70,7 @@ int tst_rnd_up(){
 	return 0;
 }// -------------------------------------------------------------------------------------------------------------
 int up_f(){
-	srand(41445);
+	srand(414435);
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(8);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 
