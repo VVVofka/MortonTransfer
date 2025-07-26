@@ -95,6 +95,7 @@
     <ClInclude Include="common.cuh" />
     <ClInclude Include="constmem.cuh" />
     <ClInclude Include="CudaArray.h" />
+    <ClInclude Include="CudaArrayD1.h" />
     <ClInclude Include="dumps.cuh" />
     <ClInclude Include="Lay.h" />
     <ClInclude Include="Lays.h" />

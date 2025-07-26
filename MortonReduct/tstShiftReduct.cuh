@@ -2,6 +2,7 @@
 // tstShiftReduct.cuh
 #include "common.cuh"
 #include "CudaArray.h"
+#include "CudaArrayD1.h"
 #include "constmem.cuh"
 #include <vector>
 #include "morton.cuh"
@@ -68,6 +69,7 @@ int tst_rnd_up(){
 	return 0;
 }// -------------------------------------------------------------------------------------------------------------
 int up_f(){
+	srand(444);
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(8);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 
@@ -104,7 +106,7 @@ int up_f(){
 	std::vector<double> f_3(64);
 	printf("\nkLay1: %.2f\n", vklays[1][0]);
 	for(int j = 0; j < 4; j++){
-		printf("j = %d\n", j);
+		printf("\nj_lay1 = %d\n", j);
 		uint64_t a1 = (resd16 >> (j * 4)) & 0xF;
 		Dumps::dump1D_uns64(a1, "a1: ");
 
@@ -114,17 +116,18 @@ int up_f(){
 		printf("fup = %.2f\n", fup[0]);
 		f_1[j] = kf_1 * vklays[1] + fup;
 		Dumps::dumpAr4(f_1[j], "f_1[j] = kf_1 * vklays[1] + fup: ");
+		printf("\nkLay2: %.2f\n", vklays[2][0]);
 		for(int i = 0; i < 4; i++){
-			printf("i = %d\n", i);
+			printf("i_lay2 = %d\n", i);
 			uint64_t a2 = (in64 >> (j * 16 + i * 4)) & 0xF;
 			Dumps::dump1D_uns64(a2, "a2: ");
 
 			MortonHostModel::Ar4 kf_2 = MortonHostModel::kF(a2);
 			Dumps::dumpAr4(kf_2, "kf_2: ");
 			MortonHostModel::Ar4 fup_2 = MortonHostModel::Ar4(f_1[j][i], 4);
-			printf("fup = %.2f\n", fup_2[0]);
+			printf("fup_lay2 = %.2f\n", fup_2[0]);
 			f_2[j * 4 + i] = kf_2 * vklays[2] + fup_2;
-			Dumps::dumpAr4(f_2[j * 4 + i], "f_1[j*4+i] = kf_2 * vklays[2] + fup_2: ");
+			Dumps::dumpAr4(f_2[j * 4 + i], "f_2[j*4+i] = kf_2 * vklays[2] + fup_2: ");
 			for(int k = 0; k < 4; k++)
 				f_3[j * 16 + i * 4 + k] = f_2[j * 4 + i][k];
 		}
@@ -136,18 +139,20 @@ int up_f(){
 	assert(f_3 == vf0);
 	// device #########################################################
 	CudaArray<uint64_t> data_a_in(vin64);
-	CudaArray<__half2> data_f_out(8);
-	ConstMem::setSZ0(8);
+	CudaArrayD1<__half2> data_f_out(64 / 2);
+	//ConstMem::setSZ0(8);
 	ConstMem::loadKLay(MortonHostModel::kLay, sizeof(MortonHostModel::kLay) / sizeof(MortonHostModel::kLay[0]));
 	ConstMem::loadKF4(MortonHostModel::vkF());
 	//int2 shift{-8,-4};
 	Dumps::dump2D_cudaar(data_a_in, "IN CUDA: ");
 
 	//glTop1N<3><<<1,1>>>(data_a_in.pdevice, data_f_out.pdevice);
-	glTop1 << <1, 64 >> > (data_a_in.pdevice, data_f_out.pdevice);
+	glTop1 << <1, 32 >> > (data_a_in.pdevice, data_f_out.pdevice);
 	CHECK_CUDA(cudaDeviceSynchronize());
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
+	Dumps::VDouble(f_3, 8, "f_3:");
+	Dumps::VDouble(vhout, 8, "vhout:");
 	if(Compare::vectors(vhout, f_3)){
 		printf("\nup_f() Ok!\n");
 		return 0;

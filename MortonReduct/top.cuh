@@ -51,16 +51,18 @@ static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __re
 	if(threadIdx.x < 8){
 		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 8))) & 0xF;	// (threadIdx.x / 8)=[0..3]
 		const __half* pkf_2 = &kF4[a_2 * 4];
-		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);
-		f1[threadIdx.x] = f0[threadIdx.x / 16] + pkf2_2[threadIdx.x & 1] * kLay[1];
+		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);	// TODO:
+		const __half* fup = reinterpret_cast<__half*>(f0);
+		f1[threadIdx.x] = __half2half2(fup[threadIdx.x / 4]) + pkf2_2[threadIdx.x >> 1] * kLay[1];
 	}
 	__syncthreads();	// __syncwarp();
 
 	const uint64_t a64 = in_val[0];
-	const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 2))) & 0xF;	// (threadIdx.x / 2)=[0..15]
-	const __half* pkf_3 = &kF4[a_3 * 4];
+	const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 4))) & 0xF;	// (threadIdx.x / 2)=[0..15]
+	const __half* pkf_3 = &kF4[a_3 * 4 + ((threadIdx.x / 2) & 1)];	// TODO:
 	const __half2* pkf2_3 = reinterpret_cast<const __half2*>(pkf_3);
-	const __half2 res_3 = f1[threadIdx.x / 4] + pkf2_3[threadIdx.x & 1] * kLay[2];
+	const __half* fup = reinterpret_cast<__half*>(f1);
+	const __half2 res_3 = __half2half2(fup[threadIdx.x / 16]) + pkf2_3[threadIdx.x >> 2] * kLay[2];
 
 	out[threadIdx.x] = res_3;
 }// ----------------------------------------------------------------------------------------------

@@ -66,8 +66,16 @@ template <typename T> void dump1D_uns64(std::vector<T> v, const std::string& cap
 	for(int j=0; j<(int)v.size(); j++){
 		dump1D_uns64<T>(v[j]);
 	}
-}// -------------------------------------------------------------------------------------------------------------
+} // -------------------------------------------------------------------------------------------------------------
 void dumpAr4(const std::valarray<double>& v, const std::string& caption = ""){
 	printf("%s%+.2f %+.2f %+.2f %+.2f\n", caption.c_str(), v[0], v[1], v[2], v[3]);
- }
+ } // -------------------------------------------------------------------------------------------------------------
+void VDouble(const std::vector<double>& v, size_t column=8, const std::string& caption = ""){
+	if(caption != "") printf("%s\n", caption.c_str());
+	for(size_t n = 0; n < v.size(); n++){
+		printf("%+.2f ", v[n]);
+		if(((n+1) % column == 0) && n)
+			printf("\n");
+	}
+ } // -------------------------------------------------------------------------------------------------------------
 } // namespace Dumps::
