@@ -13,6 +13,7 @@
 #include <iostream>
 #include "Lays.h"
 using std::vector;
+using std::string;
 namespace TST_ShiftReduce{
 // -------------------------------------------------------------------------------------------------------------
 int test01(){
@@ -116,7 +117,8 @@ int up_f(){
 		MortonHostModel::Ar4 fup = MortonHostModel::Ar4(f_0[j], 4);
 		printf("fup = %.2f\n", fup[0]);
 		f_1[j] = kf_1 * vklays[1] + fup;
-		Dumps::dumpAr4(f_1[j], "f_1[j] = kf_1 * vklays[1] + fup: ");
+		string sdump1 = "f_1[" +  std::to_string(j) + "] = kf_1 * vklays[1] + fup: ";
+		Dumps::dumpAr4(f_1[j], sdump1);
 		printf("\nkLay2: %.2f\n", vklays[2][0]);
 		for(int i = 0; i < 4; i++){
 			printf("i_lay2 = %d\n", i);
@@ -129,7 +131,8 @@ int up_f(){
 			MortonHostModel::Ar4 fup_2 = MortonHostModel::Ar4(f_1[j][i], 4);
 			printf("fup_lay2 = %.2f\n", fup_2[0]);
 			f_2[j * 4 + i] = kf_2 * vklays[2] + fup_2;
-			Dumps::dumpAr4(f_2[j * 4 + i], "f_2[j*4+i] = kf_2 * vklays[2] + fup_2: ");
+			string sdump2 = "f_2[" + std::to_string(j) + "*4+" + std::to_string(i) + "] = kf_2 * vklays[2] + fup_2: ";
+			Dumps::dumpAr4(f_2[j * 4 + i], sdump2);
 			for(size_t k = 0; k < 4; k++)
 				vf_res_handwork[j * 16 + i * 4 + k] = f_2[j * 4 + i][k];
 		}
