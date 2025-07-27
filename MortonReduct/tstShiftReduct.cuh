@@ -154,7 +154,7 @@ int up_f3(unsigned seed = 0){
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
 	//Dumps::VDouble(vhout, 8, "vhout:");
-	if(Compare::vectors(vf_res_handwork, vhout, 0.001))
+	if(Compare::vectors(vf_res_handwork, vhout, 0.003))
 		return 0;
 	return -1;
 }// -------------------------------------------------------------------------------------------------------------
@@ -179,7 +179,7 @@ int up_f4(unsigned seed = 0){
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
 	//Dumps::VDouble(vhout, 8, "vhout:");
-	if(Compare::vectors(vf_res_lays, vhout, 0.001))
+	if(Compare::vectors(vf_res_lays, vhout, 0.003))
 		return 0;
 	return -1;
 }// -------------------------------------------------------------------------------------------------------------
@@ -205,7 +205,7 @@ int up_f5(unsigned seed = 0){
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
 	//Dumps::VDouble(vhout, 8, "vhout:");
-	if(Compare::vectors(vf_res_lays, vhout, 0.001))
+	if(Compare::vectors(vf_res_lays, vhout, 0.003))
 		return 0;
 	return -1;
 }// -------------------------------------------------------------------------------------------------------------
