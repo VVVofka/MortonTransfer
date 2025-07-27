@@ -168,7 +168,7 @@ int up_f(){
 	return -1;
 }// -------------------------------------------------------------------------------------------------------------
 int up_f2(){
-	srand(414435);
+	//srand(414435);
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64 * 4);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 	for(int j = 0; j < 4; j++){

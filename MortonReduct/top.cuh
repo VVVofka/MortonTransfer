@@ -109,7 +109,7 @@ static __global__ void glTop2(const uint64_t* __restrict__ in_val, __half2* __re
 		f2[threadIdx.x] = __half2half2(fup) + kf * kLay[2];
 	}
 	__syncthreads();	// threadIdx.x < 128
-	const uint64_t a_4 = (src[threadIdx.x / 32] >> (4 * (threadIdx.x / 8))) & 0xF;
+	const uint64_t a_4 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
 	const __half* pkf_4 = &kF4[a_4 * 4];	// size=4
 	const __half2* pkf2_4 = reinterpret_cast<const __half2*>(pkf_4);	// size=2
 	const __half2 kf = pkf2_4[threadIdx.x & 1];
