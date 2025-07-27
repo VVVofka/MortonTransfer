@@ -74,12 +74,14 @@ static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __re
 static __global__ void glTop2(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
 	__shared__ uint64_t src[4], a4, a16, a64;
 	__shared__ __half2 f0[2], f1[8], f2[32];
-	if(threadIdx.x < 4){
+
+	if(threadIdx.x < 4)
 		src[threadIdx.x] = in_val[threadIdx.x];
-		if(threadIdx.x == 0){
-			a64 = reduct64by1bit(src);
-			get_topA4A16(a64, a4, a16); // a4: 4 bit used only; a16: 16 bit used only;
-		}
+	__syncwarp();
+
+	if(threadIdx.x == 0){
+		a64 = reduct64by1bit(src);
+		get_topA4A16(a64, a4, a16); // a4: 4 bit used only; a16: 16 bit used only;
 	}
 	__syncthreads();
 
@@ -117,4 +119,68 @@ static __global__ void glTop2(const uint64_t* __restrict__ in_val, __half2* __re
 	const __half2 res_4 = __half2half2(fup) + kf * kLay[3];
 
 	out[threadIdx.x] = res_4;
+}// ----------------------------------------------------------------------------------------------
+
+// 512 thread: in_val[16](16*64=1024bit) out[512](half2)
+static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
+	__shared__ uint64_t src[16], a4, a16, a64, a256[4];
+	__shared__ __half2 f0[2], f1[8], f2[32], f3[128];
+
+	if(threadIdx.x < 16)
+		src[threadIdx.x] = in_val[threadIdx.x];
+	__syncwarp();
+
+	if(threadIdx.x < 4)
+		a256[threadIdx.x] = reduct64by1bit(src);
+	__syncwarp();
+
+	if(threadIdx.x == 0){
+		a64 = reduct64by1bit(a256);
+		get_topA4A16(a64, a4, a16); // a4: 4 bit used only; a16: 16 bit used only;
+	}
+	__syncthreads();
+
+	if(threadIdx.x < 2){
+		const __half* pkf_1 = &kF4[a4 * 4];
+		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
+		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
+	}
+	__syncthreads();
+
+	if(threadIdx.x < 8){
+		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 2))) & 0xF;
+		const __half* pkf_2 = &kF4[a_2 * 4];	// size=4
+		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);	// size=2
+		const __half2 kf = pkf2_2[threadIdx.x & 1];
+		const __half fup = (reinterpret_cast<__half*>(f0))[threadIdx.x / 2];
+		f1[threadIdx.x] = __half2half2(fup) + kf * kLay[1];
+	}
+	__syncthreads();
+
+	if(threadIdx.x < 32){
+		const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 2))) & 0xF;
+		const __half* pkf_3 = &kF4[a_3 * 4];	// size=4
+		const __half2* pkf2_3 = reinterpret_cast<const __half2*>(pkf_3);	// size=2
+		const __half2 kf = pkf2_3[threadIdx.x & 1];
+		const __half fup = (reinterpret_cast<__half*>(f1))[threadIdx.x / 2];
+		f2[threadIdx.x] = __half2half2(fup) + kf * kLay[2];
+	}
+	__syncthreads();
+
+	if(threadIdx.x < 128){
+		const uint64_t a_4 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+		const __half* pkf_4 = &kF4[a_4 * 4];	// size=4
+		const __half2* pkf2_4 = reinterpret_cast<const __half2*>(pkf_4);	// size=2
+		const __half2 kf = pkf2_4[threadIdx.x & 1];
+		const __half fup = (reinterpret_cast<__half*>(f2))[threadIdx.x / 2];
+		const __half2 res_4 = __half2half2(fup) + kf * kLay[3];
+		f3[threadIdx.x] = __half2half2(fup) + kf * kLay[3];
+	}
+	__syncthreads();
+	const uint64_t a_5 = (src[threadIdx.x / 128] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+	const __half* pkf_5 = &kF4[a_5 * 4];	// size=4
+	const __half2* pkf2_5 = reinterpret_cast<const __half2*>(pkf_5);	// size=2
+	const __half2 kf = pkf2_5[threadIdx.x & 1];
+	const __half fup = (reinterpret_cast<__half*>(f3))[threadIdx.x / 2];
+	out[threadIdx.x] = __half2half2(fup) + kf * kLay[4];
 }// ----------------------------------------------------------------------------------------------
