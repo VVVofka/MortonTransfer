@@ -42,9 +42,9 @@ double kLay[6]{0.8, 0.9, 1.0, 1.1, 1.2, 1.3};
 
 typedef std::vector<int> ivector;
 // -------------------------------------------------------------------------------------------------------------
-std::vector<uint64_t> fillrnd_1bit(unsigned sz_side, double k = 0.3){
+std::vector<uint64_t> fillrnd_1bit(unsigned sz_all, double k = 0.3){
 	const int level = int(255 * k);
-	std::vector<uint64_t> ret(sz_side * sz_side / 64);
+	std::vector<uint64_t> ret(sz_all / 64);
 	for(size_t nword = 0; nword < ret.size(); nword++){
 		ret[nword] = 0;
 		for(uint64_t j = 0; j < 64; j++){

@@ -15,6 +15,6 @@ public:
 		create((int)v_lays.size(), v_lays.data(), p_kf);
 	}
 
-	std::vector<double>* run(const std::vector<int>& data_in);
+	std::vector<double>* run(const std::vector<int>& data_in, int dump_lay = -1, int dump_j = -1);
 };
 }

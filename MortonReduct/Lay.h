@@ -14,7 +14,7 @@ public:
 	void create(size_t N, std::vector<int>* pvaup, double k_lay, const double* p_kf);
 	std::vector<int>* load(const std::vector<int>& pdata_in);	// hard copy
 	void run_up();
-	std::vector<double>* run_dn(const std::vector<double>* pvfup);
+	std::vector<double>* run_dn(const std::vector<double>* pvfup, int dump_up = -1);
 
 private:
 	std::vector<int>* pvaup = nullptr;

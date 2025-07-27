@@ -17,7 +17,7 @@ using std::string;
 namespace TST_ShiftReduce{
 // -------------------------------------------------------------------------------------------------------------
 int test01(){
-	std::vector<uint64_t> vin = MortonHostModel::fillrnd_1bit(32);
+	std::vector<uint64_t> vin = MortonHostModel::fillrnd_1bit(32 * 32);
 	CudaArray<uint64_t> lay_in(vin);
 	CudaArray<uint64_t> lay_shift(4);
 	CudaArray<uint64_t> lay_mid(2);
@@ -43,7 +43,7 @@ int test01(){
 }// -------------------------------------------------------------------------------------------------------------
 int tst_rnd_up(){
 	for(int j = 0; j < 10000; j++){
-		std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(8);
+		std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64);
 		std::vector<int> vini = MortonHostModel::unpack(vin64);
 
 		std::vector<int> v16 = MortonHostModel::reduct(vini);
@@ -71,7 +71,7 @@ int tst_rnd_up(){
 }// -------------------------------------------------------------------------------------------------------------
 int up_f(){
 	srand(414435);
-	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(8);
+	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 
 	std::vector<int> v16 = MortonHostModel::reduct(vini);
@@ -117,7 +117,7 @@ int up_f(){
 		MortonHostModel::Ar4 fup = MortonHostModel::Ar4(f_0[j], 4);
 		printf("fup = %.2f\n", fup[0]);
 		f_1[j] = kf_1 * vklays[1] + fup;
-		string sdump1 = "f_1[" +  std::to_string(j) + "] = kf_1 * vklays[1] + fup: ";
+		string sdump1 = "f_1[" + std::to_string(j) + "] = kf_1 * vklays[1] + fup: ";
 		Dumps::dumpAr4(f_1[j], sdump1);
 		printf("\nkLay2: %.2f\n", vklays[2][0]);
 		for(int i = 0; i < 4; i++){
@@ -166,5 +166,33 @@ int up_f(){
 		return 0;
 	}
 	return -1;
+}// -------------------------------------------------------------------------------------------------------------
+int up_f2(){
+	srand(414435);
+	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64 * 4);
+	std::vector<int> vini = MortonHostModel::unpack(vin64);
+
+	// ####### Lays  ########################################################
+	using namespace LAYs;
+	Lays lays(4, MortonHostModel::kLay, MortonHostModel::vkF().data());
+	vector<double> vf_res_lays = *lays.run(vini);
+	Dumps::VDouble(vf_res_lays, 8, "vf_res_lays:");
+	// device #########################################################
+	CudaArray<uint64_t> data_a_in(vin64);
+	CudaArrayD1<__half2> data_f_out(128);
+	ConstMem::loadKLay(MortonHostModel::kLay, sizeof(MortonHostModel::kLay) / sizeof(MortonHostModel::kLay[0]));
+	ConstMem::loadKF4(MortonHostModel::vkF());
+
+	glTop2 << <1, 128 >> > (data_a_in.pdevice, data_f_out.pdevice);
+	CHECK_CUDA(cudaDeviceSynchronize());
+	data_f_out.copy2host();
+	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
+	Dumps::VDouble(vhout, 8, "vhout:");
+	if(Compare::vectors(vf_res_lays, vhout, 0.001)){
+		printf("\nup_f() Ok!\n");
+		return 0;
+	}
+	return -1;
+
 }// -------------------------------------------------------------------------------------------------------------
 } // namespace TST_ShiftReduce{

@@ -13,7 +13,7 @@ void Lays::create(int cnt_lays, const double* p_klay, const double* p_kf){
 		pa_up = &lay.va_dn;
 	}
 } // ---------------------------------------------------------------------------------------------
-std::vector<double>* Lays::run(const vector<int>& data_in){
+std::vector<double>* Lays::run(const vector<int>& data_in, int dump_lay/*-1*/, int dump_j/*-1*/){
 	assert(vlays.size());
 	int nlay = (int)vlays.size() - 1;
 	vlays[nlay].load(data_in);
@@ -23,7 +23,7 @@ std::vector<double>* Lays::run(const vector<int>& data_in){
 	}
 	vector<double>* pfup = nullptr;
 	while(++nlay < (int)vlays.size()){
-		pfup = vlays[nlay].run_dn(pfup);
+		pfup = vlays[nlay].run_dn(pfup, dump_lay == nlay ? dump_j : -1);
 	}
 	return pfup;
 } // ---------------------------------------------------------------------------------------------
