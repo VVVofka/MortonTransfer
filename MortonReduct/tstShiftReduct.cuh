@@ -187,13 +187,12 @@ int up_f5(unsigned seed = 0){
 	srand(seed ? seed : (unsigned)time(0));
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64 * 16);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
-	for(int j = 0; j < 4; j++) Dumps::dump1D_uns64(vin64[j]), printf("0x%016llX  %zu\n", vin64[j], vin64[j]);
+	//for(int j = 0; j < 4; j++) Dumps::dump1D_uns64(vin64[j]), printf("0x%016llX  %zu\n", vin64[j], vin64[j]);
 	// ####### Lays  ########################################################
 	using namespace LAYs;
 	Lays lays(5, MortonHostModel::kLay, MortonHostModel::vkF().data());
-	//vector<double> vf_res_lays = *lays.run(vini, 4, 256/4);	//	vector<double> vf_res_lays = *lays.run(vini, 4, 0);
-	vector<double> vf_res_lays = *lays.run(vini, 4, 256);
-	lays.dump();
+	vector<double> vf_res_lays = *lays.run(vini, -4, -256);
+	//lays.dump();
 	//Dumps::VDouble(vf_res_lays, 8, "vf_res_lays:");
 	// device #########################################################
 	CudaArray<uint64_t> data_a_in(vin64);

@@ -168,14 +168,16 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 	__syncthreads();
 
 	if(threadIdx.x < 128){
-		const uint64_t a_4 = (a256[threadIdx.x / 128] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+		const uint64_t a_4 = (a256[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+		if(threadIdx.x == 32)
+			printf("%u\n", (unsigned)a_4);
 		const __half* pkf_4 = &kF4[a_4 * 4];	// size=4
 		const __half2* pkf2_4 = reinterpret_cast<const __half2*>(pkf_4);	// size=2
 		const __half2 kf = pkf2_4[threadIdx.x & 1];
 		const __half fup = (reinterpret_cast<__half*>(f2))[threadIdx.x / 2];
 		f3[threadIdx.x] = __half2half2(fup) + kf * kLay[3];
 	}
-	__syncthreads();
+	__syncthreads();	// threadIdx.x < 512
 	const uint64_t a_5 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
 	const __half* pkf_5 = &kF4[a_5 * 4];	// size=4
 	const __half2* pkf2_5 = reinterpret_cast<const __half2*>(pkf_5);	// size=2

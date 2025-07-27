@@ -38,10 +38,10 @@ vector<double>* Lay::run_dn(const vector<double>* pvfup, int dump_up/*- 1*/){
 			for(size_t n = 0; n < 4; n++)
 				vf_dn[j_up * 4 + n] = fup + pkf4[n] * kLay;
 			if(dump_up == j_up){
-				printf("%zu%zu%zu%zu fup:%.2f + kF:%+.2f %+.2f %+.2f %+.2f * kLay:%.2f\n",
-					mask >> 3, (mask >> 2) & 1, (mask >> 1) & 1, mask & 1,
+				printf("%5d %zu%zu%zu%zu fup:%.2f + kF:%+.2f %+.2f %+.2f %+.2f * kLay:%.2f\n",
+					dump_up * 4, mask >> 3, (mask >> 2) & 1, (mask >> 1) & 1, mask & 1,
 					fup, pkf4[3], pkf4[2], pkf4[1], pkf4[0], kLay);
-				printf("          Result:   %+.2f %+.2f %+.2f %+.2f\n",
+				printf("                Result:   %+.2f %+.2f %+.2f %+.2f\n",
 					vf_dn[j_up * 4 + 3], vf_dn[j_up * 4 + 2], vf_dn[j_up * 4 + 1], vf_dn[j_up * 4]);
 			}
 		}
