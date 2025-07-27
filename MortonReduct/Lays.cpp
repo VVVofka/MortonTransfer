@@ -23,8 +23,17 @@ std::vector<double>* Lays::run(const vector<int>& data_in, int dump_lay/*-1*/, i
 	}
 	vector<double>* pfup = nullptr;
 	while(++nlay < (int)vlays.size()){
-		pfup = vlays[nlay].run_dn(pfup, dump_lay == nlay ? dump_j : -1);
+		pfup = vlays[nlay].run_dn(pfup, dump_lay == nlay ? dump_j / 4 : -1);
 	}
 	return pfup;
+} // ---------------------------------------------------------------------------------------------
+void Lays::dump(){
+	for(int nlay = 0; nlay < (int)vlays.size(); nlay++){
+		printf("\nLay %d\n", nlay);
+		vlays[nlay].dump_va();
+	}
+} // ---------------------------------------------------------------------------------------------
+void Lays::dump_lay(size_t n_lay){
+	vlays[n_lay].dump_va();
 } // ---------------------------------------------------------------------------------------------
 }

@@ -41,7 +41,7 @@ vector<double>* Lay::run_dn(const vector<double>* pvfup, int dump_up/*- 1*/){
 				printf("%zu%zu%zu%zu fup:%.2f + kF:%+.2f %+.2f %+.2f %+.2f * kLay:%.2f\n",
 					mask >> 3, (mask >> 2) & 1, (mask >> 1) & 1, mask & 1,
 					fup, pkf4[3], pkf4[2], pkf4[1], pkf4[0], kLay);
-				printf("          Result:   %+.2f %+.2f %+.2f %+.2f\n", 
+				printf("          Result:   %+.2f %+.2f %+.2f %+.2f\n",
 					vf_dn[j_up * 4 + 3], vf_dn[j_up * 4 + 2], vf_dn[j_up * 4 + 1], vf_dn[j_up * 4]);
 			}
 		}
@@ -52,5 +52,20 @@ vector<double>* Lay::run_dn(const vector<double>* pvfup, int dump_up/*- 1*/){
 			vf_dn[n] = pkf4[n] * kLay;
 	}
 	return &vf_dn;
+} // ---------------------------------------------------------------------------------------------
+void Lay::dump_va(){
+	printf("%s", sdump_va().c_str());
+} // ---------------------------------------------------------------------------------------------
+std::string Lay::sdump_va(){
+	std::string sret;
+	for(size_t j = 0; j < va_dn.size(); j++){
+		if(j && (j % 4) == 0) sret += " ";
+		if(j && (j % 16) == 0) sret += " ";
+		if(j && (j % 64) == 0) sret += "\n";
+		if(j && (j % 256) == 0) sret += "\n";
+		if(va_dn[j]) sret += "1";
+		else sret += ".";
+	}
+	return sret + "\n";
 } // ---------------------------------------------------------------------------------------------
 }

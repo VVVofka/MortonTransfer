@@ -17,7 +17,8 @@ int main(){
 	int ret = 0;
 	//ret = TST_ShiftReduce::test01();
 	//ret = TST_ShiftReduce::tst_rnd_up();
-	ret = TST_ShiftReduce::up_f();
-	//ret = TST_ShiftReduce::up_f2();
+	ret += TST_ShiftReduce::up_f3();
+	ret += TST_ShiftReduce::up_f4();
+	ret += TST_ShiftReduce::up_f5(123);
 	return ret;
 }

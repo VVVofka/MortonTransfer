@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <string>
 namespace LAYs{
 
 class Lay{
@@ -15,6 +16,8 @@ public:
 	std::vector<int>* load(const std::vector<int>& pdata_in);	// hard copy
 	void run_up();
 	std::vector<double>* run_dn(const std::vector<double>* pvfup, int dump_up = -1);
+	void dump_va();
+	std::string sdump_va();
 
 private:
 	std::vector<int>* pvaup = nullptr;

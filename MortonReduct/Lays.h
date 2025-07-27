@@ -16,5 +16,8 @@ public:
 	}
 
 	std::vector<double>* run(const std::vector<int>& data_in, int dump_lay = -1, int dump_j = -1);
+
+	void dump();
+	void dump_lay(size_t n_lay);
 };
 }
