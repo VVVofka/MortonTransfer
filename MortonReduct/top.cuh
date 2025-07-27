@@ -15,7 +15,7 @@ static __device__ __host__ __forceinline__ uint64_t pack16(uint64_t a){
 		((a & 0x1'0000) >> 12) | ((a & 0x10'0000) >> 15) | ((a & 0x100'0000) >> 18) | ((a & 0x1000'0000) >> 21) |
 		((a & 0x1'0000'0000) >> 24) | ((a & 0x10'0000'0000) >> 27) | ((a & 0x100'0000'0000) >> 30) | ((a & 0x1000'0000'0000) >> 33) |
 		((a & 0x1'0000'0000'0000) >> 36) | ((a & 0x10'0000'0000'0000) >> 39) | ((a & 0x100'0000'0000'0000) >> 42) | ((a & 0x1000'0000'0000'0000) >> 45);
-}// ----------------------------------------------------------------------------------------------
+} // ----------------------------------------------------------------------------------------------
 static __device__ __host__ __inline__ void get_topA4A16(const uint64_t src, uint64_t& out4, uint64_t& out16){
 	// 64 -> 16 unpack
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
@@ -30,8 +30,31 @@ static __device__ __host__ __inline__ void get_topA4A16(const uint64_t src, uint
 	sum1 >>= 1;			// 1 if 2 or 3
 	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
 	out4 = pack4(sum1);
-}// ===============================================================================================
+} // ----------------------------------------------------------------------------------------------
+__device__ __forceinline__ __half2 FourToOneTop(const uint64_t* src, const __half2* f_prev, const __half2 klay){
+	const uint64_t a_5 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + a_5 * 4)[threadIdx.x & 1];
+	const __half fup = (reinterpret_cast<const __half*>(f_prev))[threadIdx.x / 2];
+	return __half2half2(fup) + kf * klay;
+} // ----------------------------------------------------------------------------------------------
+__device__ __forceinline__ __half2 FourToOneTop(const uint64_t src, const __half2* f_prev, const __half2 klay){
+	const uint64_t a_3 = (src >> (4 * (threadIdx.x / 2))) & 0xF;
+	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + a_3 * 4)[threadIdx.x & 1];
+	const __half fup = (reinterpret_cast<const __half*>(f_prev))[threadIdx.x / 2];
+	return  __half2half2(fup) + kf * klay;
+} // ----------------------------------------------------------------------------------------------
 
+// ===============================================================================================
+
+// 512*4=2048 thread; f_up_in[512](512*2=1024) f_out[512*4=2048](2048*2=4096) a_dn_in[4096/64=64]
+static __global__ void glDnMid1(const __half2* __restrict__ f_up_in, const uint64_t* a_dn_in, 
+							__half2* __restrict__ f_out, const __half2 klay){
+	const unsigned id = threadIdx.x + blockIdx.x * blockDim.x;
+	const uint64_t a_5 = (a_dn_in[id / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + a_5 * 4)[threadIdx.x & 1];
+	const __half fup = (reinterpret_cast<const __half*>(f_up_in))[id / 2];
+	f_out[id] = __half2half2(fup) + kf * klay;
+}// ===============================================================================================
 
 // 32 thread: in_val[1](64bit) out[32](half2)
 static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
@@ -51,23 +74,11 @@ static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __re
 	}
 	__syncthreads();
 
-	if(threadIdx.x < 8){
-		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 2))) & 0xF;
-		const __half* pkf_2 = &kF4[a_2 * 4];	// size=4
-		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);	// size=2
-		const __half2 kf = pkf2_2[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<__half*>(f0))[threadIdx.x / 2];
-		f1[threadIdx.x] = __half2half2(fup) + kf * kLay[1];
-	}
+	if(threadIdx.x < 8)
+		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
 	__syncthreads();
-	const uint64_t a64 = src;	// 64
-	const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 2))) & 0xF;
-	const __half* pkf_3 = &kF4[a_3 * 4];	// size=4
-	const __half2* pkf2_3 = reinterpret_cast<const __half2*>(pkf_3);	// size=2
-	const __half2 kf = pkf2_3[threadIdx.x & 1];
-	const __half fup = (reinterpret_cast<__half*>(f1))[threadIdx.x / 2];
-	const __half2 res_3 = __half2half2(fup) + kf * kLay[2];
-	out[threadIdx.x] = res_3;
+
+	out[threadIdx.x] = FourToOneTop(src, f1, kLay[2]);
 }// ----------------------------------------------------------------------------------------------
 
 // 128 thread: in_val[4](4*64=256bit) out[128](half2)
@@ -92,33 +103,15 @@ static __global__ void glTop2(const uint64_t* __restrict__ in_val, __half2* __re
 	}
 	__syncthreads();
 
-	if(threadIdx.x < 8){
-		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 2))) & 0xF;
-		const __half* pkf_2 = &kF4[a_2 * 4];	// size=4
-		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);	// size=2
-		const __half2 kf = pkf2_2[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<__half*>(f0))[threadIdx.x / 2];
-		f1[threadIdx.x] = __half2half2(fup) + kf * kLay[1];
-	}
+	if(threadIdx.x < 8)
+		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
 	__syncthreads();
 
-	if(threadIdx.x < 32){
-		const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 2))) & 0xF;
-		const __half* pkf_3 = &kF4[a_3 * 4];	// size=4
-		const __half2* pkf2_3 = reinterpret_cast<const __half2*>(pkf_3);	// size=2
-		const __half2 kf = pkf2_3[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<__half*>(f1))[threadIdx.x / 2];
-		f2[threadIdx.x] = __half2half2(fup) + kf * kLay[2];
-	}
+	if(threadIdx.x < 32)
+		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
 	__syncthreads();	// threadIdx.x < 128
-	const uint64_t a_4 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
-	const __half* pkf_4 = &kF4[a_4 * 4];	// size=4
-	const __half2* pkf2_4 = reinterpret_cast<const __half2*>(pkf_4);	// size=2
-	const __half2 kf = pkf2_4[threadIdx.x & 1];
-	const __half fup = (reinterpret_cast<__half*>(f2))[threadIdx.x / 2];
-	const __half2 res_4 = __half2half2(fup) + kf * kLay[3];
 
-	out[threadIdx.x] = res_4;
+	out[threadIdx.x] = FourToOneTop(src, f2, kLay[3]);
 }// ----------------------------------------------------------------------------------------------
 
 // 512 thread: in_val[16](16*64=1024bit) out[512](half2)
@@ -147,39 +140,17 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 	}
 	__syncthreads();
 
-	if(threadIdx.x < 8){
-		const uint64_t a_2 = (a16 >> (4 * (threadIdx.x / 2))) & 0xF;
-		const __half* pkf_2 = &kF4[a_2 * 4];	// size=4
-		const __half2* pkf2_2 = reinterpret_cast<const __half2*>(pkf_2);	// size=2
-		const __half2 kf = pkf2_2[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<__half*>(f0))[threadIdx.x / 2];
-		f1[threadIdx.x] = __half2half2(fup) + kf * kLay[1];
-	}
+	if(threadIdx.x < 8)
+		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
 	__syncthreads();
 
-	if(threadIdx.x < 32){
-		const uint64_t a_3 = (a64 >> (4 * (threadIdx.x / 2))) & 0xF;
-		const __half* pkf_3 = &kF4[a_3 * 4];	// size=4
-		const __half2* pkf2_3 = reinterpret_cast<const __half2*>(pkf_3);	// size=2
-		const __half2 kf = pkf2_3[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<__half*>(f1))[threadIdx.x / 2];
-		f2[threadIdx.x] = __half2half2(fup) + kf * kLay[2];
-	}
+	if(threadIdx.x < 32)
+		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
 	__syncthreads();
 
-	if(threadIdx.x < 128){
-		const uint64_t a_4 = (a256[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
-		const __half* pkf_4 = &kF4[a_4 * 4];	// size=4
-		const __half2* pkf2_4 = reinterpret_cast<const __half2*>(pkf_4);	// size=2
-		const __half2 kf = pkf2_4[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<__half*>(f2))[threadIdx.x / 2];
-		f3[threadIdx.x] = __half2half2(fup) + kf * kLay[3];
-	}
+	if(threadIdx.x < 128)
+		f3[threadIdx.x] = FourToOneTop(a256, f2, kLay[3]);
 	__syncthreads();	// threadIdx.x < 512
-	const uint64_t a_5 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
-	const __half* pkf_5 = &kF4[a_5 * 4];	// size=4
-	const __half2* pkf2_5 = reinterpret_cast<const __half2*>(pkf_5);	// size=2
-	const __half2 kf = pkf2_5[threadIdx.x & 1];
-	const __half fup = (reinterpret_cast<__half*>(f3))[threadIdx.x / 2];
-	out[threadIdx.x] = __half2half2(fup) + kf * kLay[4];
+
+	out[threadIdx.x] = FourToOneTop(src, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
 }// ----------------------------------------------------------------------------------------------
