@@ -107,12 +107,17 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 
 	if(threadIdx.x == 0){
 		a6 = (uint32_t)reduct32by1bit(a7);	// 32 bit whole
-		a5 = reduct8by1bit(a6);	// 8 bit
+		a5 = reduct8by1bit(a6);	// 4*2=8 bit
+
+		// to down
+		const __half* pkf_1 = &kF4[(a5 & 0xF) * 4];	// 4 values
+		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);	// 2 values
+
 	}
 	__syncthreads();
 
 	if(threadIdx.x < 2){
-		const __half* pkf_1 = &kF4[a4 * 4];
+		const __half* pkf_1 = &kF4[a5 * 4];
 		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
 		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
 	}
