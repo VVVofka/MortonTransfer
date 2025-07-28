@@ -15,6 +15,9 @@
         } \
     } while (0)
 
+uint32_t get_a(unsigned a4){return (0b1111111011101000 >> a4) & 1;}
+uint32_t get_a15(unsigned a4){ return (0b1111111011101000 >> (a4 & 15)) & 1; }
+
 namespace Convert{
 template <typename T> std::vector<T> VectorHalf2ToVector(const std::vector<__half2>& vh2){
 	std::vector<T> ret(vh2.size() * 2);
