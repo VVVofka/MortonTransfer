@@ -2,6 +2,32 @@
 //reduction.cuh
 #include <cuda_runtime.h>
 #include <vector>
+static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
+	constexpr uint64_t M = 0x1111'1111U;
+	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	return 	// 8 bit
+		((sum & 0x1000'0000) >> 21) | ((sum & 0x100'0000) >> 18) | ((sum & 0x10'0000) >> 15) | ((sum & 0x1'0000) >> 12) |
+		((sum & 0x1000) >> 9) | ((sum & 0x100) >> 6) | ((sum & 0x10) >> 3) | (sum & 0x1);
+} // ------------------------------------------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ uint64_t reduct32by1bit(const uint64_t* __restrict__ src){ // src[2]
+	// sum by 4 bit, if sum < 2 then 0 else 1
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum = (src[0] & M) + ((src[0] >> 1) & M) + ((src[0] >> 2) & M) + ((src[0] >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	//compact by mask: 0001'0001'0001'0001 0001'0001'0001'0001
+	uint64_t dst =
+		((sum & 0x1000'0000'0000'0000) >> 45) | ((sum & 0x100'0000'0000'0000) >> 42) | ((sum & 0x10'0000'0000'0000) >> 39) | ((sum & 0x1'0000'0000'0000) >> 36) |
+		((sum & 0x1000'0000'0000) >> 33) | ((sum & 0x100'0000'0000) >> 30) | ((sum & 0x10'0000'0000) >> 27) | ((sum & 0x1'0000'0000) >> 24) |
+		((sum & 0x1000'0000) >> 21) | ((sum & 0x100'0000) >> 18) | ((sum & 0x10'0000) >> 15) | ((sum & 0x1'0000) >> 12) |
+		((sum & 0x1000) >> 9) | ((sum & 0x100) >> 6) | ((sum & 0x10) >> 3) | (sum & 0x1);
+	return dst;	// 32 bit
+} // ////////////////////////////////////////////////////////////////////////////////
+
 
 static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
 	// sum by 4 bit, if sum < 2 then 0 else 1
@@ -66,7 +92,7 @@ static __device__ __inline__ void reduct64by1bit_x2(const uint64_t* __restrict__
 }// ************************************************************************************
 
 static __host__ bool testreduct(unsigned seed = 0){	// seed = 0
-	srand(seed? seed: (unsigned)time(0));
+	srand(seed ? seed : (unsigned)time(0));
 	std::vector<int> vtstin(64 * 4);
 	for(int& i : vtstin) i = rand() & 1;
 	printf("vtstin:\n");
