@@ -211,7 +211,7 @@ int up_f5(unsigned seed = 0){
 }// -------------------------------------------------------------------------------------------------------------
 int mid(unsigned seed = 0){
 	srand(seed ? seed : (unsigned)time(0));
-	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(1024 * 1024, 0.24);
+	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(1024 * 1024, 0.45);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 	{ auto i = vin64[vin64.size() - 1]; Dumps::dump1D_uns64(i, "Last "), printf("%zu 0x%016llX  %zu\n", vin64.size() - 1, i, i); }
 	// ####### Lays  ########################################################
@@ -220,9 +220,7 @@ int mid(unsigned seed = 0){
 	for(auto& i: lays.vlays) i.dump_a_last = true;
 	vector<double> vf_res_lays = *lays.run(vini, -4, -256);
 	lays.dump_a_first("Lays First:");
-	lays.dump_a_last("Lays Last:");
-	//lays.dump();
-	//Dumps::VDouble(vf_res_lays, 8, "vf_res_lays:");
+	//lays.dump_a_last("Lays Last:");
 	// device #########################################################
 	CudaArray<uint64_t> data_a_in(vin64);
 	CudaArrayD1<__half2> data_f_in(512);
@@ -235,9 +233,17 @@ int mid(unsigned seed = 0){
 	//glDnMid3 << <512, 1024 >> > (data_f_in.pdevice, data_a_in.pdevice, data_f_out.pdevice);
 	CHECK_CUDA(cudaDeviceSynchronize());
 	data_a_out.copy2host();
-	for(size_t j = 0; j < data_f_in.szall; j++){
-		
+	std::vector<uint64_t> voutamidup(16);
+	size_t i = 0;
+	for(size_t j = 0; j < voutamidup.size(); j++){
+		for(size_t n = 0; n < 32; n++){
+			voutamidup[j] |= (uint64_t)data_a_out.phost[i++] << (2 * n);
+		}
 	}
+	//Dumps::dump1D_uns64(voutamidup, "device:\n");
+	auto vhostpack = MortonHostModel::pack<uint64_t, int>(lays.vlays[5].va_dn);
+	//Dumps::dump1D_uns64(vhostpack, "host:\n");
+
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
 	//Dumps::VDouble(vhout, 8, "vhout:");
