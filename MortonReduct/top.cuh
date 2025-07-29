@@ -33,81 +33,17 @@ static __device__ __host__ __inline__ void get_topA4A16(const uint64_t src, uint
 	out4 = pack4(sum1);
 } // ----------------------------------------------------------------------------------------------
 __device__ __forceinline__ __half2 FourToOneTop(const uint64_t* src, const __half2* f_prev, const __half2 klay){
-	const uint64_t a_5 = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
-	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + a_5 * 4)[threadIdx.x & 1];
+	const uint64_t maska = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
+	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + maska * 4)[threadIdx.x & 1];
 	const __half fup = (reinterpret_cast<const __half*>(f_prev))[threadIdx.x / 2];
 	return __half2half2(fup) + kf * klay;
 } // ----------------------------------------------------------------------------------------------
 __device__ __forceinline__ __half2 FourToOneTop(const uint64_t src, const __half2* f_prev, const __half2 klay){
-	const uint64_t a_3 = (src >> (4 * (threadIdx.x / 2))) & 0xF;	// wo (threadIdx.x & 31)
-	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + a_3 * 4)[threadIdx.x & 1];
+	const uint64_t maska = (src >> (4 * (threadIdx.x / 2))) & 0xF;	// wo (threadIdx.x & 31)
+	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + maska * 4)[threadIdx.x & 1];
 	const __half fup = (reinterpret_cast<const __half*>(f_prev))[threadIdx.x / 2];
 	return  __half2half2(fup) + kf * klay;
 } // ===============================================================================================
-// GridDim.x = 512 blocks; BlockDim.x = 1024 threads;
-// Lay4: half2[512] f_up; (1'024 half) side=32
-// Lay5: half2[2'048] f_up; (4'096 half) side=64
-// Lay6: half2[8'192] f_up; (16'384 half) side=128
-// Lay7: half2[32'768] f_up; (65'536 half) side=256
-// Lay8: half2[131'072] f_up; (262'144 half) side=512
-// Lay9: half2[524'288] f_up; (1'048'576 half) side=1024
-// Parametrs:
-// half2 f_up_in[512] =BlockDim; 1024 values;
-// uint64_t a_dn_in[16384] =id/32 (32 per block) - recalculate all 'a' for avoid global memory access.
-// half2 fout[524'288] //see Lay9 (1024 per block; 1 per thread)
-static __global__ void glDnMid3_(const __half2* __restrict__ f_up_in,
-								const uint64_t* __restrict__ in_val,
-								__half2* __restrict__ f_out){
-	__shared__ uint64_t src_a[32], a8[8], a7[2];
-	__shared__ uint32_t a6 /* 32 bit */, a5 /* 8 bit */;
-	__shared__ __half2 f8[131'072], f7[32'768], f6[8'192], f5[2'048], src_f[512];
-	assert(sizeof(src_f) / sizeof(src_f[0]) == blockDim.x);
-	const unsigned id = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if(threadIdx.x < 32)
-		src_a[threadIdx.x] = in_val[32 * blockIdx.x + threadIdx.x];
-	__syncwarp();
-
-	if(threadIdx.x < 8)
-		a8[threadIdx.x] = reduct64by1bit(src_a + threadIdx.x * 4);
-	__syncwarp();
-
-	if(threadIdx.x < 2)
-		a7[threadIdx.x & 1] = reduct64by1bit(a8 + (threadIdx.x & 1) * 4);
-	__syncwarp();
-
-	if(threadIdx.x == 0){
-		a6 = (uint32_t)reduct32by1bit(a7);	// 32 bit whole
-		a5 = reduct8by1bit(a6);	// 4*2=8 bit
-
-		// to down
-		const __half* pkf_1 = &kF4[(a5 & 0xF) * 4];	// 4 values
-		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);	// 2 values
-
-	}
-	__syncthreads();
-
-	if(threadIdx.x < 2){
-		const __half* pkf_1 = &kF4[a5 * 4];
-		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
-		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
-	}
-	__syncthreads();
-
-	if(threadIdx.x < 8)
-		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
-	__syncthreads();
-
-	if(threadIdx.x < 32)
-		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
-	__syncthreads();
-
-	if(threadIdx.x < 128)
-		f3[threadIdx.x] = FourToOneTop(a256, f2, kLay[3]);
-	__syncthreads();	// threadIdx.x < 512
-
-	out[threadIdx.x] = FourToOneTop(src, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
-}// ===============================================================================================
 
 // 32 thread: in_val[1](64bit) out[32](half2)
 static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
@@ -118,18 +54,18 @@ static __global__ void glTop1(const uint64_t* __restrict__ in_val, __half2* __re
 		src = in_val[0];
 		get_topA4A16(src, a4, a16); // a4: 4 bit used only; a16: 16 bit used only;
 	}
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 2){
 		const __half* pkf_1 = &kF4[a4 * 4];
 		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
 		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
 	}
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 8)
 		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
-	__syncthreads();
+	syncthreads();
 
 	out[threadIdx.x] = FourToOneTop(src, f1, kLay[2]);
 }// ----------------------------------------------------------------------------------------------
@@ -141,28 +77,28 @@ static __global__ void glTop2(const uint64_t* __restrict__ in_val, __half2* __re
 
 	if(threadIdx.x < 4)
 		src[threadIdx.x] = in_val[threadIdx.x];
-	__syncwarp();
+	syncwarp();
 
 	if(threadIdx.x == 0){
 		a64 = reduct64by1bit(src);
 		get_topA4A16(a64, a4, a16); // a4: 4 bit used only; a16: 16 bit used only;
 	}
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 2){
 		const __half* pkf_1 = &kF4[a4 * 4];
 		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
 		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
 	}
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 8)
 		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 32)
 		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
-	__syncthreads();	// threadIdx.x < 128
+	syncthreads();	// threadIdx.x < 128
 
 	out[threadIdx.x] = FourToOneTop(src, f2, kLay[3]);
 }// ----------------------------------------------------------------------------------------------
@@ -174,36 +110,36 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 
 	if(threadIdx.x < 16)
 		src[threadIdx.x] = in_val[threadIdx.x];
-	__syncwarp();
+	syncwarp();
 
 	if(threadIdx.x < 4)
 		a256[threadIdx.x] = reduct64by1bit(src + threadIdx.x * 4);
-	__syncwarp();
+	syncwarp();
 
 	if(threadIdx.x == 0){
 		a64 = reduct64by1bit(a256);
 		get_topA4A16(a64, a4, a16); // a4: 4 bit used only; a16: 16 bit used only;
 	}
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 2){
 		const __half* pkf_1 = &kF4[a4 * 4];
 		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
 		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
 	}
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 8)
 		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 32)
 		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
-	__syncthreads();
+	syncthreads();
 
 	if(threadIdx.x < 128)
 		f3[threadIdx.x] = FourToOneTop(a256, f2, kLay[3]);
-	__syncthreads();	// threadIdx.x < 512
+	syncthreads();;	// threadIdx.x < 512
 
 	out[threadIdx.x] = FourToOneTop(src, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
 }// ----------------------------------------------------------------------------------------------
@@ -217,58 +153,68 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 // Lay9: half2[524'288] f_up; (1'048'576 half) side=1024
 // Parametrs:
 // half2 f_up_in[512] =BlockDim; 1024 values;
-// uint64_t a_dn_in[16384] =id/32 (32 per block) - recalculate all 'a' for avoid global memory access.
+// uint64_t in_val[16384] =id/32 (32 per block) - recalculate all 'a' for avoid global memory access.
 // half2 fout[524'288] //see Lay9 (1024 per block; 1 per thread)
 static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 								const uint64_t* __restrict__ in_val,
 								__half2* __restrict__ f_out){
-	__shared__ uint64_t src_a[32], a8[8], a7[2];
+	__shared__ uint32_t src_a[64], src_b[7];
 	__shared__ uint32_t a6 /* 32 bit */, a5 /* 8 bit */;
 	__shared__ __half2 f8[131'072], f7[32'768], f6[8'192], f5[2'048], src_f[512];
+
 	assert(sizeof(src_f) / sizeof(src_f[0]) == blockDim.x);
-	const unsigned id = blockIdx.x * blockDim.x + threadIdx.x;
+	half2 fout = f_up_in[blockIdx.x];
 
-	if(threadIdx.x < 32)
-		src_a[threadIdx.x] = in_val[threadIdx.x];
-	__syncwarp();
+	const uint32_t* src32 = reinterpret_cast<const uint32_t*>(in_val);
+	if((threadIdx.x & 15) == 0)
+		src_a[threadIdx.x / 16] = src32[blockIdx.x * 64 + threadIdx.x / 16];
+	syncthreads();
 
-	if(threadIdx.x < 8)
-		a8[threadIdx.x] = reduct64by1bit(src_a + threadIdx.x * 4);
-	__syncwarp();
+	{	// Lay 9	(64*32bit)
+		const uint32_t mask = (src_a[threadIdx.x / 16] >> (4 * ((threadIdx.x & 15) / 4))) & 0xF;
+		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
+		fout += kf * kLay[9];
 
-	if(threadIdx.x < 2)
-		a7[threadIdx.x & 1] = reduct64by1bit(a8 + (threadIdx.x & 1) * 4);
-	__syncwarp();
-
-	if(threadIdx.x == 0){
-		a6 = (uint32_t)reduct32by1bit(a7);	// 32 bit whole
-		a5 = reduct8by1bit(a6);	// 4*2=8 bit
-
-		// to down
-		const __half* pkf_1 = &kF4[(a5 & 0xF) * 4];	// 4 values
-		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);	// 2 values
-
+		if((threadIdx.x & 15) == 0){
+			uint32_t& src = src_a[threadIdx.x / 16];
+			constexpr uint32_t M = 0x1111'1111;
+			src = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+			src >>= 1;			// 1 if 2 or 3
+			src |= src >> 1;  // or if 4 ( res in pos 0)
+			src = (src & 0x0001'0001) | ((src & 0x0010'0010) >> 3) | ((src & 0x0100'0100) >> 6) | ((src & 0x1000'1000) >> 9);
+		}
+		syncthreads();
 	}
-	__syncthreads();
-
-	if(threadIdx.x < 2){
-		const __half* pkf_1 = &kF4[a5 * 4];
-		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
-		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
+	{	// Lay 8 (64*8bit)
+		const uint32_t mask = (src_a[threadIdx.x / 16] >> (16 * (threadIdx.x & 1))) & 0xF;
+		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
+		fout += kf * kLay[8];
+		if((threadIdx.x & 15) == 0)
+			src_a[threadIdx.x / 16] = mask;
+		syncthreads();
 	}
-	__syncthreads();
-
-	if(threadIdx.x < 8)
-		f1[threadIdx.x] = FourToOneTop(a16, f0, kLay[1]);
-	__syncthreads();
-
-	if(threadIdx.x < 32)
-		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
-	__syncthreads();
-
-	if(threadIdx.x < 128)
-		f3[threadIdx.x] = FourToOneTop(a256, f2, kLay[3]);
-	__syncthreads();	// threadIdx.x < 512
-
-	out[threadIdx.x] = FourToOneTop(src, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
+	{	// Lay 7 (63*2bit)
+		const uint32_t mask = src_a[(threadIdx.x / 32) * 2] | (src_a[(threadIdx.x / 32) * 2 + 1] << 2);
+		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
+		fout += kf * kLay[7];
+		if((threadIdx.x & 127) == 0)
+			src_b[threadIdx.x / 128] = mask;
+		syncthreads();  // TODO: syncwarp()?
+	}
+	{	// Lay 6	(8*4bit)
+		const uint32_t* base = src_b + threadIdx.x / 128;
+		const uint32_t mask = base[0];
+		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
+		fout += kf * kLay[6];
+		if((threadIdx.x & 127) == 0)
+			src_a[threadIdx.x / 128] = get_a(mask);
+		syncwarp();
+	}
+	{	// Lay 5	(8*1bit)
+		const uint32_t* base = src_a + threadIdx.x / 128;
+		const uint32_t mask = base[0] | (base[1] << 1) | (base[2] << 2) | (base[3] << 3);
+		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
+		fout += kf * kLay[5];
+	}
+	f_out[threadIdx.x] = fout;
 }// ===============================================================================================

@@ -15,8 +15,10 @@
         } \
     } while (0)
 
-uint32_t get_a(unsigned a4){return (0b1111111011101000 >> a4) & 1;}
-uint32_t get_a15(unsigned a4){ return (0b1111111011101000 >> (a4 & 15)) & 1; }
+__device__ __host__ __forceinline__ uint32_t get_a(unsigned a4){return (0b1111111011101000 >> a4) & 1;}
+__device__ __host__ __forceinline__ uint32_t get_a15(unsigned a4){ return (0b1111111011101000 >> (a4 & 15)) & 1; }
+__device__ __forceinline__ void syncwarp(){ __syncwarp (); }
+__device__ __forceinline__ void syncthreads(){ __syncthreads(); }
 
 namespace Convert{
 template <typename T> std::vector<T> VectorHalf2ToVector(const std::vector<__half2>& vh2){
