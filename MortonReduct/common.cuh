@@ -17,8 +17,12 @@
 
 __device__ __host__ __forceinline__ uint32_t get_a(unsigned a4){return (0b1111111011101000 >> a4) & 1;}
 __device__ __host__ __forceinline__ uint32_t get_a15(unsigned a4){ return (0b1111111011101000 >> (a4 & 15)) & 1; }
+
+#pragma warning(push)
+#pragma warning(disable:0020) 
 __device__ __forceinline__ void syncwarp(){ __syncwarp (); }
 __device__ __forceinline__ void syncthreads(){ __syncthreads(); }
+#pragma warning(pop)
 
 namespace Convert{
 template <typename T> std::vector<T> VectorHalf2ToVector(const std::vector<__half2>& vh2){

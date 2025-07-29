@@ -223,11 +223,12 @@ int mid(unsigned seed = 0){
 	//Dumps::VDouble(vf_res_lays, 8, "vf_res_lays:");
 	// device #########################################################
 	CudaArray<uint64_t> data_a_in(vin64);
-	CudaArrayD1<__half2> data_f_out(512);
+	CudaArrayD1<__half2> data_f_in(512);
+	CudaArrayD1<__half2> data_f_out(524288);
 	ConstMem::loadKLay(MortonHostModel::kLay, sizeof(MortonHostModel::kLay) / sizeof(MortonHostModel::kLay[0]));
 	ConstMem::loadKF4(MortonHostModel::vkF());
 
-	glTop3 << <1, 512 >> > (data_a_in.pdevice, data_f_out.pdevice);
+	glDnMid3 << <512, 1024 >> > (data_f_in.pdevice, data_a_in.pdevice, data_f_out.pdevice);
 	CHECK_CUDA(cudaDeviceSynchronize());
 	data_f_out.copy2host();
 	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
