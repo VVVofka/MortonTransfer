@@ -159,10 +159,6 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 								const uint64_t* __restrict__ in_val,
 								__half2* __restrict__ f_out){
 	__shared__ uint32_t src_a[64], src_b[7];
-	__shared__ uint32_t a6 /* 32 bit */, a5 /* 8 bit */;
-	__shared__ __half2 f8[131'072], f7[32'768], f6[8'192], f5[2'048], src_f[512];
-
-	assert(sizeof(src_f) / sizeof(src_f[0]) == blockDim.x);
 	half2 fout = f_up_in[blockIdx.x];
 
 	const uint32_t* src32 = reinterpret_cast<const uint32_t*>(in_val);
@@ -170,7 +166,7 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 		src_a[threadIdx.x / 16] = src32[blockIdx.x * 64 + threadIdx.x / 16];
 	syncthreads();
 
-	{	// Lay 9	(64*32bit)
+	{	// Lay 9	in:(64*32bit)
 		const uint32_t mask = (src_a[threadIdx.x / 16] >> (4 * ((threadIdx.x & 15) / 4))) & 0xF;
 		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
 		fout += kf * kLay[9];
@@ -185,7 +181,7 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 		}
 		syncthreads();
 	}
-	{	// Lay 8 (64*8bit)
+	{	// Lay 8	in:(64*8bit)
 		const uint32_t mask = (src_a[threadIdx.x / 16] >> (16 * (threadIdx.x & 1))) & 0xF;
 		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
 		fout += kf * kLay[8];
@@ -193,7 +189,7 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 			src_a[threadIdx.x / 16] = mask;
 		syncthreads();
 	}
-	{	// Lay 7 (63*2bit)
+	{	// Lay 7	in:(63*2bit)
 		const uint32_t mask = src_a[(threadIdx.x / 32) * 2] | (src_a[(threadIdx.x / 32) * 2 + 1] << 2);
 		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
 		fout += kf * kLay[7];
@@ -201,7 +197,7 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 			src_b[threadIdx.x / 128] = mask;
 		syncthreads();  // TODO: syncwarp()?
 	}
-	{	// Lay 6	(8*4bit)
+	{	// Lay 6	in:(8*4bit)
 		const uint32_t* base = src_b + threadIdx.x / 128;
 		const uint32_t mask = base[0];
 		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];
@@ -210,7 +206,7 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 			src_a[threadIdx.x / 128] = get_a(mask);
 		syncwarp();
 	}
-	{	// Lay 5	(8*1bit)
+	{	// Lay 5	in:(8*1bit)
 		const uint32_t* base = src_a + threadIdx.x / 128;
 		const uint32_t mask = base[0] | (base[1] << 1) | (base[2] << 2) | (base[3] << 3);
 		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + mask * 4)[threadIdx.x & 1];

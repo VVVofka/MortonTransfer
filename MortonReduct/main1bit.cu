@@ -17,10 +17,11 @@ int main(){
 	int ret = 0;
 	//ret = TST_ShiftReduce::test01();
 	//ret = TST_ShiftReduce::tst_rnd_up();
-	for(int j = 0; j < 100; j++){
-		ret += TST_ShiftReduce::up_f3();
-		ret += TST_ShiftReduce::up_f4();
-		ret += TST_ShiftReduce::up_f5();
-	}
+	ret = TST_ShiftReduce::mid(123);
+	//for(int j = 0; j < 100; j++){
+	//	ret += TST_ShiftReduce::up_f3();
+	//	ret += TST_ShiftReduce::up_f4();
+	//	ret += TST_ShiftReduce::up_f5();
+	//}
 	return ret;
 }
