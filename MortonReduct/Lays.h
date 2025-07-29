@@ -1,6 +1,7 @@
 #pragma once
 #include "Lay.h"
 #include <vector>
+#include <string>
 namespace LAYs{
 class Lays{
 public:
@@ -19,5 +20,7 @@ public:
 
 	void dump();
 	void dump_lay(size_t n_lay);
+	void dump_a_first(const std::string& caption = "");
+	void dump_a_last(const std::string& caption = "");
 };
 }

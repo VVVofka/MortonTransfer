@@ -214,3 +214,60 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 	}
 	f_out[threadIdx.x] = fout;
 }// ===============================================================================================
+// GridDim.x = 512 blocks; BlockDim.x = 1024 threads;
+// Lay4: side=32
+// Lay5: side=64
+// Lay6: side=128
+// Lay7: side=256
+// Lay8: side=512
+// Lay9: side=1024
+// Parametrs:
+// uint64_t data_in[16384] 
+// uint64_t data_out[16]
+static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
+								uint32_t* __restrict__ data_out){
+	__shared__ uint32_t src_a[64], src_b[7];
+	const uint32_t* src32 = reinterpret_cast<const uint32_t*>(data_in);
+
+	if((threadIdx.x & 15) == 0)
+		src_a[threadIdx.x / 16] = src32[blockIdx.x * 64 + threadIdx.x / 16];
+	syncthreads();
+
+	{	// Lay 9	in:(64*32bit)
+		if((threadIdx.x & 15) == 0){
+			uint32_t& src = src_a[threadIdx.x / 16];
+			constexpr uint32_t M = 0x1111'1111;
+			src = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+			src >>= 1;			// 1 if 2 or 3
+			src |= src >> 1;  // or if 4 ( res in pos 0)
+			src = (src & 0x0001'0001) | ((src & 0x0010'0010) >> 3) | ((src & 0x0100'0100) >> 6) | ((src & 0x1000'1000) >> 9);
+		}
+		syncthreads();
+	}
+	{	// Lay 8	in:(64*8bit)
+		uint32_t& src = src_a[threadIdx.x / 16];
+		const uint32_t mask = get_a(src & 0xF) | (get_a((src >> 16) & 0xF) << 1);
+		if((threadIdx.x & 15) == 0)
+			src = mask;
+		syncthreads();
+	}
+	{	// Lay 7	in:(63*2bit)
+		const uint32_t mask = src_a[(threadIdx.x / 32) * 2] | (src_a[(threadIdx.x / 32) * 2 + 1] << 2);
+		if((threadIdx.x & 127) == 0)
+			src_b[threadIdx.x / 128] = mask;
+		syncthreads();  // TODO: syncwarp()?
+	}
+	{	// Lay 6	in:(8*4bit)
+		const uint32_t* base = src_b + threadIdx.x / 128;
+		const uint32_t mask = base[0];
+		if((threadIdx.x & 127) == 0)
+			src_a[threadIdx.x / 128] = get_a(mask);
+		syncwarp();
+	}
+	{	// Lay 5	in:(8*1bit)
+		const uint32_t* base = src_a + threadIdx.x / 128;
+		const uint32_t mask0 = base[0] | (base[1] << 1) | (base[2] << 2) | (base[3] << 3);
+		const uint32_t mask1 = (base[4] << 0) | (base[5] << 1) | (base[6] << 2) | (base[7] << 3);
+		data_out[blockIdx.x] = get_a(mask0) | (get_a(mask1) << 1);
+	}
+}// =======================*512========================================================================

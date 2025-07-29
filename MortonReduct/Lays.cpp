@@ -37,4 +37,34 @@ void Lays::dump(){
 void Lays::dump_lay(size_t n_lay){
 	vlays[n_lay].dump_va();
 } // ---------------------------------------------------------------------------------------------
+void Lays::dump_a_first(const std::string& caption){
+	if(caption != "") printf("%s\n", caption.c_str());
+	for(int nlay = 0; nlay < (int)vlays.size(); nlay++){
+		Lay& lay = vlays[nlay];
+		const std::vector<int>& v = lay.va_dn;
+		printf("Lay%zu ->", lay.N);
+		for(size_t j = 0; j < __min(v.size(), 16); j++){
+			if((j % 4) == 0)
+				printf(" ");
+			printf("%d", v[j]);
+		}
+		const int* p = lay.va_dn.data();
+		printf(" kLay=%.2f side=%4zu all=%zu\n", lay.kLay, lay.sz_dn, v.size());
+	}
+} // ---------------------------------------------------------------------------------------------
+void Lays::dump_a_last(const std::string& caption){
+	if(caption != "") printf("%s\n", caption.c_str());
+	for(int nlay = 0; nlay < (int)vlays.size(); nlay++){
+		Lay& lay = vlays[nlay];
+		const std::vector<int>& v = lay.va_dn;
+		printf("Lay%zu", lay.N);
+		for(int j = __max(0, (int)v.size() - 16) ; j < int(v.size()); j++){
+			if((j % 4) == 0)
+				printf(" ");
+			printf("%d", v[j]);
+		}
+		const int* p = lay.va_dn.data();
+		printf(" <- kLay=%.2f side=%4zu all=%zu\n", lay.kLay, lay.sz_dn, v.size());
+	}
+} // ---------------------------------------------------------------------------------------------
 }

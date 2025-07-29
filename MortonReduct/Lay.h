@@ -11,7 +11,7 @@ public:
 	double pkF[64]{};
 	std::vector<int> va_dn;
 	std::vector<double> vf_dn;
-	bool dump_last = false;
+	bool dump_a_last = false;
 
 	void create(size_t N, std::vector<int>* pvaup, double k_lay, const double* p_kf);
 	std::vector<int>* load(const std::vector<int>& pdata_in);	// hard copy

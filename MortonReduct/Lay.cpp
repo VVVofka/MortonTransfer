@@ -44,7 +44,7 @@ vector<double>* Lay::run_dn(const vector<double>* pvfup, int dump_up/*- 1*/){
 				printf("                  Result:   %+.2f %+.2f %+.2f %+.2f\n",
 					vf_dn[j_up * 4 + 3], vf_dn[j_up * 4 + 2], vf_dn[j_up * 4 + 1], vf_dn[j_up * 4]);
 			}
-			const bool isdumplast = dump_last && ((j_up + 1) == pvfup->size());
+			const bool isdumplast = dump_a_last && ((j_up + 1) == pvfup->size());
 			if(isdumplast){
 				printf("%7zu %zu%zu%zu%zu fup:%.2f + kF:%+.2f %+.2f %+.2f %+.2f * kLay:%.2f\n",
 					j_up * 4, mask >> 3, (mask >> 2) & 1, (mask >> 1) & 1, mask & 1,
