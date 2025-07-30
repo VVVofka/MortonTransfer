@@ -325,7 +325,7 @@ int test_reduce(unsigned size_side = 32){
 		for(unsigned tx = 0; tx < top_side; ++tx){
 			unsigned in_base_x = tx * 4;
 			unsigned in_base_y = ty * 4;
-			unsigned tid = encode(tx, ty);
+			auto tid = encode(tx, ty);
 
 			// collect 4 mid-values
 			unsigned combined = 0;
@@ -336,7 +336,7 @@ int test_reduce(unsigned size_side = 32){
 						for(unsigned i = 0; i < 4; ++i){
 							unsigned x = (in_base_x + mx * 2 + i - shift.x + size_side) & (size_side - 1);
 							unsigned y = (in_base_y + my * 2 + j - shift.y + size_side) & (size_side - 1);
-							unsigned idx = encode(x, y);
+							unsigned idx = (unsigned)encode(x, y);
 							unsigned val = get_val(h_input, idx);
 							local_mask |= (val & 1) << (j * 4 + i);
 						}

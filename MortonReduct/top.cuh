@@ -246,7 +246,7 @@ static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 		data_out[blockIdx.x] = ret;	// 1024
 	}
 }// ===============================================================================================
-// GridDim.x = 1024 blocks; BlockDim.x = 1024 threads;
+// GridDim.x = 1024 blocks; BlockDim.x = 1024 threads; idThread[1048576] 4 value/thread
 // Parametrs:
 // __half data_fup[1024] 
 // uint64_t data_in[65536]; 4'194'304 values (2048x2048)
@@ -256,8 +256,10 @@ static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 static __global__ void glDnMid3(const uint64_t* __restrict__ data_in,
 								uint32_t* __restrict__ data_out){
 	__shared__ uint64_t shr[64];
-	const auto id_in = blockIdx.x * 64 + threadIdx.x;
-	shr[threadIdx.x] = reduct64natural(data_in[id_in]) << threadIdx.x;
+	const auto id_in = blockIdx.x * 1024 + threadIdx.x;
+	const uint64_t datain = data_in[id_in / 16];
+
+	shr[threadIdx.x] = reduct64natural() << threadIdx.x;
 	syncthreads();
 	if(threadIdx.x == 0){
 		uint64_t ret = shr[0];
