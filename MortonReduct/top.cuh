@@ -155,7 +155,7 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 // half2 f_up_in[512] =BlockDim; 1024 values;
 // uint64_t in_val[16384] =id/32 (32 per block) - recalculate all 'a' for avoid global memory access.
 // half2 fout[524'288] //see Lay9 (1024 per block; 1 per thread)
-static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
+static __global__ void glDnMid3_(const __half2* __restrict__ f_up_in,
 								const uint64_t* __restrict__ in_val,
 								__half2* __restrict__ f_out){
 	__shared__ uint32_t src_a[64], src_b[7];
@@ -246,3 +246,25 @@ static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 		data_out[blockIdx.x] = ret;	// 1024
 	}
 }// ===============================================================================================
+// GridDim.x = 1024 blocks; BlockDim.x = 1024 threads;
+// Parametrs:
+// __half data_fup[1024] 
+// uint64_t data_in[65536]; 4'194'304 values (2048x2048)
+// __half data_out[65536];  4'194'304 values (2048x2048)
+#define DUMPSRC(A, C) dumpsrc(A, sizeof(A)/sizeof(A[0]), C)
+
+static __global__ void glDnMid3(const uint64_t* __restrict__ data_in,
+								uint32_t* __restrict__ data_out){
+	__shared__ uint64_t shr[64];
+	const auto id_in = blockIdx.x * 64 + threadIdx.x;
+	shr[threadIdx.x] = reduct64natural(data_in[id_in]) << threadIdx.x;
+	syncthreads();
+	if(threadIdx.x == 0){
+		uint64_t ret = shr[0];
+#pragma unroll
+		for(unsigned j = 1; j < 64; j++)
+			ret |= shr[j];
+		data_out[blockIdx.x] = ret;	// 1024
+	}
+}// ===============================================================================================
+
