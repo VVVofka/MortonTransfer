@@ -213,11 +213,11 @@ static __global__ void glDnMid3(const __half2* __restrict__ f_up_in,
 		fout += kf * kLay[5];
 	}
 	f_out[threadIdx.x] = fout;
-}// ===============================================================================================
+} // ===============================================================================================
 
 static __device__ void dumpsrc(const uint32_t* v, size_t cnt, const char* c = nullptr){
 	if(threadIdx.x + blockIdx.x == 0){
-		if(c) printf("\n%u %s\n",(unsigned)cnt, c);
+		if(c) printf("\n%u %s\n", (unsigned)cnt, c);
 		for(int j = 0; j < cnt; j++){
 			if(j && ((j % 8) == 0)) printf("\n");
 			if((j % 4) == 0) printf(" ");
@@ -225,71 +225,24 @@ static __device__ void dumpsrc(const uint32_t* v, size_t cnt, const char* c = nu
 		}
 		printf("\n");
 	}
-}
-// GridDim.x = 512 blocks; BlockDim.x = 1024 threads;
-// Lay4: side=32
-// Lay5: side=64
-// Lay6: side=128
-// Lay7: side=256
-// Lay8: side=512
-// Lay9: side=1024
+} // ===============================================================================================
+// GridDim.x = 1024 blocks; BlockDim.x = 64 threads;
 // Parametrs:
-// uint64_t data_in[16384] 
-// uint64_t data_out[16]
+// uint64_t data_in[65536]; 4'194'304 values (2048x2048)
+// uint32_t data_out[1024] // use 64 bit
 #define DUMPSRC(A, C) dumpsrc(A, sizeof(A)/sizeof(A[0]), C)
+
 static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 								uint32_t* __restrict__ data_out){
-	__shared__ uint32_t src_a[64], src_b[7];
-	const uint32_t* src32 = reinterpret_cast<const uint32_t*>(data_in);
-
-	if((threadIdx.x & 15) == 0)
-		src_a[threadIdx.x / 16] = src32[blockIdx.x * 64 + threadIdx.x / 16];
+	__shared__ uint64_t shr[64];
+	const auto id_in = blockIdx.x * 64 + threadIdx.x;
+	shr[threadIdx.x] = reduct64natural(data_in[id_in]) << threadIdx.x;
 	syncthreads();
-	DUMPSRC(src_a, "0");
-	{	// Lay 9	in:(64*32bit)
-		if((threadIdx.x & 15) == 0){
-			uint32_t src = src_a[threadIdx.x / 16];
-			constexpr uint32_t M = 0x1111'1111;
-			src = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
-			src >>= 1;			// 1 if 2 or 3
-			src |= src >> 1;  // or if 4 ( res in pos 0)
-			src = (src & 0x0001'0001) 
-				| ((src & 0x0010'0010) >> 3) 
-				| ((src & 0x0100'0100) >> 6) 
-				| ((src & 0x1000'1000) >> 9);
-			src_a[threadIdx.x / 16] = src;
-		}
-		syncthreads();
-		DUMPSRC(src_a, "1 (32 bit)");
+	if(threadIdx.x == 0){
+		uint64_t ret = shr[0];
+#pragma unroll
+		for(unsigned j = 1; j < 64; j++)
+			ret |= shr[j];
+		data_out[blockIdx.x] = ret;	// 1024
 	}
-	{	// Lay 8	in:(64*8bit)
-		auto src = src_a[threadIdx.x / 16];
-		const uint32_t mask = get_a(src & 0xF) | (get_a((src >> 16) & 0xF) << 1);
-		if((threadIdx.x & 15) == 0)
-			src_a[threadIdx.x / 16] = mask;
-		syncthreads();
-		DUMPSRC(src_a, "2 bit");	// 2 bit
-	}
-	{	// Lay 7	in:(63*2bit)
-		const uint32_t mask = src_a[(threadIdx.x / 32) * 2] | (src_a[(threadIdx.x / 32) * 2 + 1] << 2);
-		if((threadIdx.x & 127) == 0)
-			src_b[threadIdx.x / 128] = get_a(mask);
-		syncthreads();  // TODO: syncwarp()?
-		DUMPSRC(src_b, "3 b");
-	}
-	{	// Lay 6	in:(8*4bit)
-		const uint32_t* base = src_b + threadIdx.x / 128;
-		const uint32_t mask = base[0] | (base[1] << 1) | (base[2] << 2) | (base[3] << 3);
-		if((threadIdx.x & 127) == 0)
-			src_a[threadIdx.x / 128] = get_a(mask);
-		syncwarp();
-		DUMPSRC(src_a, "4");
-	}
-	{	// Lay 5	in:(8*1bit)
-		const uint32_t* base = src_a + threadIdx.x / 128;
-		const uint32_t mask0 = base[0] | (base[1] << 1) | (base[2] << 2) | (base[3] << 3);
-		const uint32_t mask1 = base[4] | (base[5] << 1) | (base[6] << 2) | (base[7] << 3);
-		const uint32_t ret = get_a(mask0) | (get_a(mask1) << 1);
-		data_out[blockIdx.x] = ret;
-	}
-}// =======================*512========================================================================
+}// ===============================================================================================

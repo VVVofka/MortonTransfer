@@ -27,6 +27,26 @@ static __device__ __host__ __forceinline__ uint64_t reduct32by1bit(const uint64_
 		((sum & 0x1000) >> 9) | ((sum & 0x100) >> 6) | ((sum & 0x10) >> 3) | (sum & 0x1);
 	return dst;	// 32 bit
 } // ////////////////////////////////////////////////////////////////////////////////
+static __device__ __host__ __forceinline__ uint64_t reduct64natural(const uint64_t src){ // src[2]
+	// sum by 4 bit, if sum < 2 then 0 else 1
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+
+	sum = (sum & 0x0001'0001'0001'0001ull) | ((sum & 0x0010'0010'0010'0010ull) >> 3) | ((sum & 0x0100'0100'0100'0100ull) >> 6) | ((sum & 0x1000'1000'1000'1000ull) >> 9);
+	constexpr uint64_t M4 = 0x0001'0001'0001'0001ULL;
+	sum = (sum & M4) + ((sum >> 1) & M4) + ((sum >> 2) & M4) + ((sum >> 3) & M4);
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+
+	constexpr uint64_t M1 = 1ULL;
+	sum = (sum & M1) + ((sum >> 16) & M1) + ((sum >> 32) & M1) + ((sum >> 48) & M1);
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	return sum & M1;
+} // ////////////////////////////////////////////////////////////////////////////////
 
 
 static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
