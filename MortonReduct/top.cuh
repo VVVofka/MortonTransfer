@@ -236,7 +236,7 @@ static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 								uint32_t* __restrict__ data_out){
 	__shared__ uint64_t shr[64];
 	const auto id_in = blockIdx.x * 64 + threadIdx.x;
-	shr[threadIdx.x] = reduct64natural(data_in[id_in]) << threadIdx.x;
+	shr[threadIdx.x] = reduct64to1(data_in[id_in]) << threadIdx.x;
 	syncthreads();
 	if(threadIdx.x == 0){
 		uint64_t ret = shr[0];
@@ -259,7 +259,7 @@ static __global__ void glDnMid3(const uint64_t* __restrict__ data_in,
 	const auto id_in = blockIdx.x * 1024 + threadIdx.x;
 	const uint64_t datain = data_in[id_in / 16];
 
-	shr[threadIdx.x] = reduct64natural() << threadIdx.x;
+	shr[threadIdx.x] = reduct64to1() << threadIdx.x;
 	syncthreads();
 	if(threadIdx.x == 0){
 		uint64_t ret = shr[0];

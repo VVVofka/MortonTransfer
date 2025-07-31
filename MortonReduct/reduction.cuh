@@ -27,7 +27,7 @@ static __device__ __host__ __forceinline__ uint64_t reduct32by1bit(const uint64_
 		((sum & 0x1000) >> 9) | ((sum & 0x100) >> 6) | ((sum & 0x10) >> 3) | (sum & 0x1);
 	return dst;	// 32 bit
 } // ////////////////////////////////////////////////////////////////////////////////
-static __device__ __host__ __forceinline__ uint64_t reduct64natural(const uint64_t src){ // src[2]
+static __device__ __host__ __forceinline__ uint64_t reduct64to1(const uint64_t src){
 	// sum by 4 bit, if sum < 2 then 0 else 1
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
 	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
@@ -35,8 +35,8 @@ static __device__ __host__ __forceinline__ uint64_t reduct64natural(const uint64
 	sum >>= 1;  // 1 if 2 or 3
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
 
-	sum = (sum & 0x0001'0001'0001'0001ull) | ((sum & 0x0010'0010'0010'0010ull) >> 3) | ((sum & 0x0100'0100'0100'0100ull) >> 6) | ((sum & 0x1000'1000'1000'1000ull) >> 9);
 	constexpr uint64_t M4 = 0x0001'0001'0001'0001ULL;
+	sum = (sum & M4) | ((sum & (M4 << 4)) >> 3) | ((sum & (M4 << 8)) >> 6) | ((sum & (M4 << 12)) >> 9);
 	sum = (sum & M4) + ((sum >> 1) & M4) + ((sum >> 2) & M4) + ((sum >> 3) & M4);
 	sum >>= 1;  // 1 if 2 or 3
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
@@ -46,6 +46,87 @@ static __device__ __host__ __forceinline__ uint64_t reduct64natural(const uint64
 	sum >>= 1;  // 1 if 2 or 3
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
 	return sum & M1;
+} // ////////////////////////////////////////////////////////////////////////////////
+static __device__ __host__ __forceinline__ void unreduct1to64(
+		const __half2 fup_top,
+		const uint64_t a_dn,
+		const __half2* k_lay,
+		__half2* f_bot){
+	// sum by 4 bit, if sum < 2 then 0 else 1
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum = (a_dn & M) + ((a_dn >> 1) & M) + ((a_dn >> 2) & M) + ((a_dn >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	//sum &= M;
+	uint32_t amid = uint32_t(	// result in 0xFFFF
+		(sum & 0x1) | ((sum >> 3) & 0x2) | ((sum >> 6) & 0x4) | ((sum >> 9) & 0x8) |
+		((sum >> 12) & 0x10) | ((sum >> 15) & 0x20) | ((sum >> 18) & 0x40) | ((sum >> 21) & 0x80) |
+		((sum >> 24) & 0x100) | ((sum >> 27) & 0x200) | ((sum >> 30) & 0x400) | ((sum >> 33) & 0x800) |
+		((sum >> 36) & 0x1000) | ((sum >> 39) & 0x2000) | ((sum >> 42) & 0x4000) | ((sum >> 45) & 0x8000));
+
+	constexpr uint32_t M16 = 0x1111;
+	uint32_t sum16 = (amid & M16) + ((amid >> 1) & M16) + ((amid >> 2) & M16) + ((amid >> 3) & M16);
+	sum16 >>= 1;  // 1 if 2 or 3
+	sum16 |= sum16 >> 1;    // or 1 if 4 ( res in pos 0)
+	uint32_t atop = (sum16 & 1) | ((sum16 >> 3) & 2) | ((sum16 >> 6) & 4) | ((sum16 >> 9) & 8);
+
+	f_bot[0] = __half2half2(fmid.x) + kfbot[0] * k_lay[1];
+	f_bot[1] = __half2half2(fmid.x) + kfbot[1] * k_lay[1];
+	kfbot = reinterpret_cast<__half2*>(kF4 + ((amid >> 4) & 15) * 4);
+	f_dn[2] = __half2half2(fmid.y) + kfbot[0] * k_lay[1];
+	f_dn[3] = __half2half2(fmid.y) + kfbot[1] * k_lay[1];
+
+	//input: __half2 fup_top
+	__half2* kf_top = reinterpret_cast<__half2*>(kF4 + atop * 4);
+	for(unsigned i = 0; i < 2; i++){
+		half2 ftop = fup_top + kf_top[i] * k_lay[0];
+		__half2* kf_mid = reinterpret_cast<__half2*>(kF4 + amid * 4);
+		for(unsigned j = 0; j < 2; j++){
+			half fup = reinterpret_cast<__half*>(&ftop)[j];
+			__half2 fmid = __half2half2(fup) + kf_mid[j] * k_lay[1];
+			auto mask = (amid >> ((i * 2 + j) * 4)) & 15;
+			__half2* kf_bot = reinterpret_cast<__half2*>(kF4 + mask * 4);
+			__half2 fbotup = __half2half2(fmid.x);
+			for(unsigned k = 0; k < 2; k++){
+				f_bot[i * 16 + j * 4 + k * 2] = fbotup + kfbot[k] * kLay[1];
+				f_bot[i * 16 + j * 4 + k * 2 + 1] = fbotup + kfbot[k] * kLay[1];
+			}
+		}
+	}
+
+	fmid = f_up + kfmid[1] * k_lay[0];
+	kfbot = reinterpret_cast<__half2*>(kF4 + ((amid >> 8) & 15) * 4);
+	f_dn[0] = __half2half2(fmid.x) + kfbot[0] * k_lay[1];
+	f_dn[1] = __half2half2(fmid.x) + kfbot[1] * k_lay[1];
+	kfbot = reinterpret_cast<__half2*>(kF4 + ((amid >> 12) & 15) * 4);
+	f_dn[2] = __half2half2(fmid.y) + kfbot[0] * k_lay[1];
+	f_dn[3] = __half2half2(fmid.y) + kfbot[1] * k_lay[1];
+
+
+	fmid = f_up + kfmid[1] * k_lay[0];
+
+	fmid = f_up + kfmid[1] * k_lay[0];
+	const __half2* kfbot = reinterpret_cast<const __half2*>(kF4 + (amid & 15) * 4);
+	f_dn[0] = __half2half2(fmid.x) + kfbot[0] * k_lay[1];
+	f_dn[1] = __half2half2(fmid.y) + kfbot[1] * k_lay[1];
+	fmid = f_up + kfmid[1] * k_lay[0];
+	f_dn[2] = __half2half2(fmid.x) + kf1[0] * k_lay[1];
+	f_dn[3] = __half2half2(fmid.y) + kf1[1] * k_lay[1];
+
+
+
+#pragma unroll
+	for(unsigned i = 0; i < 2; i++){
+		auto fdn1 = f_up + kf[i] * k_lay[0];
+		const __half2* kf1 = reinterpret_cast<const __half2*>(kF4 + (amid & 15) * 4);
+		for(unsigned j = 0; j < 2; j++){
+			*f_dn = fdn1 + kf[i] * k_lay[1];
+			f_dn++;
+		}
+	}
+	fout += kf * kLay[6];
+
 } // ////////////////////////////////////////////////////////////////////////////////
 
 
