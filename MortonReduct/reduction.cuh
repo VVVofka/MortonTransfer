@@ -47,6 +47,102 @@ static __device__ __host__ __forceinline__ uint64_t reduct64to1(const uint64_t s
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
 	return sum & M1;
 } // ////////////////////////////////////////////////////////////////////////////////
+static __device__ __host__ __forceinline__ void fall(const uint64_t a_dn, __half2* out){
+	for(unsigned i5 = 0; i5 < 2; i5++){						// 
+		__half2 klay0;
+		for(unsigned i4 = 0; i4 < 2; i4++){					// 64
+			for(unsigned i3 = 0; i3 < 2; i3++){				// 32
+				for(unsigned i2 = 0; i2 < 2; i2++){			// 16
+					for(unsigned i1 = 0; i1 < 2; i1++){		// 8
+						__half2 fup0;
+						__half2* kf0 = reinterpret_cast<__half2*>(kF4 + mask0 * 4);
+						for(unsigned i0 = 0; i0 < 2; i0++){	// 4
+							*out++ = fup0 + kf0[0] * klay0;
+							*out++ = fup0 + kf0[1] * klay0;
+						}
+					}
+				}
+			}
+		}
+	}
+} // ----------------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ void fall(const uint64_t a_dn, __half2* out){
+	// Lay prev last
+	__half2 klay1 = kLay[8];
+	__half2 fdn_prefinal = fup_prefinal + kf[0] * klay1;
+
+	// Lay last
+	__half2 klay_final = kLay[9];
+
+	half2 fup2_final = __half2half2(fdn_prefinal.x);
+	unsigned mask_final = a_dn & 15;
+	__half2* kf_final = reinterpret_cast<__half2*>(kF4 + mask * 4);
+	*out++ = fup2_final + kf_final[0] * klay_final;
+	*out++ = fup2_final + kf_final[1] * klay_final;
+
+	fup2_final = __half2half2(fdn_prefinal.y);
+	__half2* kf = reinterpret_cast<__half2*>(kF4 + mask * 4);
+	*out++ = fup2_final + kf[0] * klay_final;
+	*out++ = fup2_final + kf[1] * klay_final;
+
+	fdn_prefinal = fup_prefinal + kf[1] * klay1;
+
+
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+
+	*out++ = __half2half2(fup) + kf * klay0;
+	*out++ = __half2half2(fup) + kf * klay0;
+} // -------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ void f1(__half fup, __half2 kf, __half2 klay, __half2* out){
+	*out = __half2half2(fup) + kf * klay;
+	out++;
+} // -------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ __half2 f1(__half fup, __half2 kf, __half2 klay){
+	return __half2half2(fup) + kf * klay;
+} // -------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ void f2(__half* fup, uint64_t a, __half2 klay, __half2* out){	// final
+	for(unsigned j = 0; j < 16; j++){
+		unsigned mask = (a >> (j * 4)) & 15;
+		__half2* kf = reinterpret_cast<__half2*>(kF4 + mask * 4);
+		f1(fup, kf[0], klay, out);
+		f1(fup, kf[1], klay, out);
+	}
+} // -------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ void f2(__half fup, unsigned a, __half2 klay, __half2* out){
+	__half2* kf = reinterpret_cast<__half2*>(kF4 + a * 4);
+	f1(fup, kf[0], klay, out);
+	f1(fup, kf[1], klay, out);
+} // -------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ void f3(__half fup, unsigned a, __half2 klay, __half2* out){
+	__half2* kf = reinterpret_cast<__half2*>(kF4 + a * 4);
+	__half2 f = f1(fup, kf[0], klay);
+
+	f = f1(fup, kf[1], klay);
+} // -------------------------------------------------------------------------------
+static __device__ __host__ __forceinline__ void f4(__half fup, unsigned a, __half2* kf, __half2 klay, __half2* out){
+	f2(fup, kf, klay, out);
+} // -------------------------------------------------------------------------------
 static __device__ __host__ __forceinline__ void unreduct1to64(
 		const __half2 fup_top,
 		const uint64_t a_dn,
@@ -80,17 +176,24 @@ static __device__ __host__ __forceinline__ void unreduct1to64(
 	//input: __half2 fup_top
 	__half2* kf_top = reinterpret_cast<__half2*>(kF4 + atop * 4);
 	for(unsigned i = 0; i < 2; i++){
-		half2 ftop = fup_top + kf_top[i] * k_lay[0];
-		__half2* kf_mid = reinterpret_cast<__half2*>(kF4 + amid * 4);
-		for(unsigned j = 0; j < 2; j++){
-			half fup = reinterpret_cast<__half*>(&ftop)[j];
-			__half2 fmid = __half2half2(fup) + kf_mid[j] * k_lay[1];
-			auto mask = (amid >> ((i * 2 + j) * 4)) & 15;
-			__half2* kf_bot = reinterpret_cast<__half2*>(kF4 + mask * 4);
-			__half2 fbotup = __half2half2(fmid.x);
-			for(unsigned k = 0; k < 2; k++){
-				f_bot[i * 16 + j * 4 + k * 2] = fbotup + kfbot[k] * kLay[1];
-				f_bot[i * 16 + j * 4 + k * 2 + 1] = fbotup + kfbot[k] * kLay[1];
+		half2 ftop2 = fup_top + kf_top[i] * k_lay[0];
+		for(unsigned i2 = 0; i2 < 2; i2++){
+			half ftop = reinterpret_cast<__half*>(&ftop2)[i2];
+			half2 fmid2 = ftop + kf_mid[j2] * k_lay[1];
+			for(unsigned j = 0; j < 4; j++){
+				unsigned mask_mid = (amid >> (j * 4)) & 15;
+				__half2* kf_mid = reinterpret_cast<__half2*>(kF4 + mask_mid * 4);
+				for(unsigned j2 = 0; j2 < 2; j2++){
+					half2 fmid2 = ftop + kf_mid[j2] * k_lay[1];
+
+
+					__half2 fup_bot = __half2half2(fmid.x);
+					half fup = reinterpret_cast<__half*>(&ftop)[j];
+					__half2 fmid = __half2half2(fup) + kf_mid[j] * k_lay[1];
+					f_bot[i * 16 + j * 4 + k * 2] = fbotup + kfbot[k] * kLay[1];
+					f_bot[i * 16 + j * 4 + k * 2 + 1] = fbotup + kfbot[k] * kLay[1];
+				}
+				__half2* kf_bot = reinterpret_cast<__half2*>(kF4 + mask * 4);
 			}
 		}
 	}
