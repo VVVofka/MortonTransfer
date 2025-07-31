@@ -2,6 +2,7 @@
 //reduction.cuh
 #include <cuda_runtime.h>
 #include <vector>
+#include "constmem.cuh"
 static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
 	constexpr uint64_t M = 0x1111'1111U;
 	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
@@ -47,92 +48,39 @@ static __device__ __host__ __forceinline__ uint64_t reduct64to1(const uint64_t s
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
 	return sum & M1;
 } // ////////////////////////////////////////////////////////////////////////////////
-static __device__ __host__ __forceinline__ void fall(const uint64_t a_dn, __half2* out){
-	for(unsigned i5 = 0; i5 < 2; i5++){						// 
-		__half2 klay0;
-		for(unsigned i4 = 0; i4 < 2; i4++){					// 64
-			for(unsigned i3 = 0; i3 < 2; i3++){				// 32
-				for(unsigned i2 = 0; i2 < 2; i2++){			// 16
-					for(unsigned i1 = 0; i1 < 2; i1++){		// 8
-						__half2 fup0;
-						__half2* kf0 = reinterpret_cast<__half2*>(kF4 + mask0 * 4);
-						for(unsigned i0 = 0; i0 < 2; i0++){	// 4
-							*out++ = fup0 + kf0[0] * klay0;
-							*out++ = fup0 + kf0[1] * klay0;
-						}
-					}
-				}
-			}
-		}
-	}
-} // ----------------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ void fall(const uint64_t a_dn, __half2* out){
-	// Lay prev last
-	__half2 klay1 = kLay[8];
-	__half2 fdn_prefinal = fup_prefinal + kf[0] * klay1;
-
-	// Lay last
-	__half2 klay_final = kLay[9];
-
-	half2 fup2_final = __half2half2(fdn_prefinal.x);
-	unsigned mask_final = a_dn & 15;
-	__half2* kf_final = reinterpret_cast<__half2*>(kF4 + mask * 4);
-	*out++ = fup2_final + kf_final[0] * klay_final;
-	*out++ = fup2_final + kf_final[1] * klay_final;
-
-	fup2_final = __half2half2(fdn_prefinal.y);
-	__half2* kf = reinterpret_cast<__half2*>(kF4 + mask * 4);
-	*out++ = fup2_final + kf[0] * klay_final;
-	*out++ = fup2_final + kf[1] * klay_final;
-
-	fdn_prefinal = fup_prefinal + kf[1] * klay1;
-
-
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
-
-	*out++ = __half2half2(fup) + kf * klay0;
-	*out++ = __half2half2(fup) + kf * klay0;
+static __device__ __host__ __forceinline__ void f1(__half fup2, unsigned mask, __half2 klay, __half2* out){	// final
+	__half2* kf = reinterpret_cast<__half2*>(kF4 + (mask & 0b1111) * 4);
+	__half2 fup = __half2half2(fup2);
+	*out++ = fup + kf[0] * klay;
+	*out++ = fup + kf[1] * klay;
 } // -------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ void f1(__half fup, __half2 kf, __half2 klay, __half2* out){
-	*out = __half2half2(fup) + kf * klay;
-	out++;
+static __device__ __host__ __forceinline__ void f2(__half fup2, 
+			unsigned mask_up, unsigned mask_dn, 
+			const __half2* klay, __half2* out){
+	__half2 fup = __half2half2(fup2);
+	__half2* kf = reinterpret_cast<__half2*>(kF4 + (mask_up & 0xF) * 4);
+
+	__half2 f01 = fup + kf[0] * *klay;
+	f1(f01.x, mask_dn, klay[1], out);
+	f1(f01.y, mask_dn >> 4 , klay[1], out);
+
+	__half2 f23 = fup + kf[1] * *klay;
+	f1(f23.x, mask_dn >> 8, klay[1], out);
+	f1(f23.y, mask_dn >> 12, klay[1], out);
 } // -------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ __half2 f1(__half fup, __half2 kf, __half2 klay){
-	return __half2half2(fup) + kf * klay;
-} // -------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ void f2(__half* fup, uint64_t a, __half2 klay, __half2* out){	// final
-	for(unsigned j = 0; j < 16; j++){
-		unsigned mask = (a >> (j * 4)) & 15;
-		__half2* kf = reinterpret_cast<__half2*>(kF4 + mask * 4);
-		f1(fup, kf[0], klay, out);
-		f1(fup, kf[1], klay, out);
-	}
-} // -------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ void f2(__half fup, unsigned a, __half2 klay, __half2* out){
-	__half2* kf = reinterpret_cast<__half2*>(kF4 + a * 4);
-	f1(fup, kf[0], klay, out);
-	f1(fup, kf[1], klay, out);
+static __device__ __host__ __forceinline__ void f3(__half2 fup,
+			unsigned mask_up, unsigned mask_mid, unsigned mask_dn,
+			const __half2* k_lay, __half2* out){
+	__half2* kf = reinterpret_cast<__half2*>(kF4 + mask_up * 4);
+
+	const __half2* klay = k_lay + 1;
+	__half2 f01 = fup + kf[0] * *klay;
+	f2(f01.x, mask_mid, mask_dn, klay, out);
+	f2(f01.y, mask_mid >> 4, mask_dn >> 16, klay, out);
+
+	__half2 f23 = fup + kf[1] * *k_lay;
+	f2(f23.x, mask_mid >> 8, mask_dn >> 32, klay, out);
+	f2(f23.y, mask_mid >> 12, mask_dn >> 48, klay, out);
 } // -------------------------------------------------------------------------------
 static __device__ __host__ __forceinline__ void f3(__half fup, unsigned a, __half2 klay, __half2* out){
 	__half2* kf = reinterpret_cast<__half2*>(kF4 + a * 4);
