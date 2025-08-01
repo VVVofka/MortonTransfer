@@ -17,20 +17,20 @@ static __device__ __host__ __forceinline__ uint64_t pack16(uint64_t a){
 		((a & 0x1'0000'0000) >> 24) | ((a & 0x10'0000'0000) >> 27) | ((a & 0x100'0000'0000) >> 30) | ((a & 0x1000'0000'0000) >> 33) |
 		((a & 0x1'0000'0000'0000) >> 36) | ((a & 0x10'0000'0000'0000) >> 39) | ((a & 0x100'0000'0000'0000) >> 42) | ((a & 0x1000'0000'0000'0000) >> 45);
 } // ----------------------------------------------------------------------------------------------
-static __device__ __host__ __inline__ void get_topA4A16(const uint64_t src, uint64_t& out4, uint64_t& out16){
+static __device__ __host__ __inline__ uint64_t get_topA4A16(const uint64_t src){
 	// 64 -> 16 unpack
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
 	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
 	sum0 >>= 1;			// 1 if 2 or 3
 	sum0 |= sum0 >> 1;  // or if 4 ( res in pos 0)
-	out16 = pack16(sum0);
+	uint64_t ret = pack16(sum0);
 
 	// 16 unpack -> 4 unpack
 	constexpr uint64_t M0 = 0x0001'0001'0001'0001ULL, M1 = M0 << 4, M2 = M1 << 4, M3 = M2 << 4;
 	uint64_t sum1 = (sum0 & M0) + ((sum0 & M1) >> 4) + ((sum0 & M2) >> 8) + ((sum0 & M3) >> 12);
 	sum1 >>= 1;			// 1 if 2 or 3
 	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
-	out4 = pack4(sum1);
+	return (ret << 4) | pack4(sum1);
 } // ----------------------------------------------------------------------------------------------
 __device__ __forceinline__ __half2 FourToOneTop(const uint64_t* src, const __half2* f_prev, const __half2 klay){
 	const uint64_t maska = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
@@ -142,6 +142,52 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 	syncthreads();;	// threadIdx.x < 512
 
 	out[threadIdx.x] = FourToOneTop(src, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
+}// ----------------------------------------------------------------------------------------------
+
+// 512 thread: 4 out/thread; in_val[64](64*64=4096values) out[2048](half2)
+static __global__ void glTop4(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
+	__shared__ uint64_t a1024[16], a4_16, a64, a256[4];
+	__shared__ __half2 f0[2], f1[8], f2[32], f3[128], f4[512];
+
+	if(threadIdx.x < 16)
+		a1024[threadIdx.x] = reduct64to16bit(in_val[threadIdx.x / 8]);
+	syncwarp();
+
+	if(threadIdx.x < 4){
+		const uint64_t* p = a1024 + threadIdx.x * 4;
+		a256[threadIdx.x] = p[0] | (p[1] << 16) | (p[2] << 32) | (p[3] << 48);
+	}
+	syncwarp();
+
+	if(threadIdx.x == 0){
+		a64 = reduct64by1bit(a256);
+		a4_16 = get_topA4A16(a64); // a4_16: 0-3 bit for a4; 4-19 bit for a16
+	}
+	syncwarp();
+
+	if(threadIdx.x < 2){
+		const __half* pkf_1 = &kF4[(a4_16 & 15) * 4];
+		const __half2* pkf2_1 = reinterpret_cast<const __half2*>(pkf_1);
+		f0[threadIdx.x] = pkf2_1[threadIdx.x] * kLay[0];
+	}
+	syncwarp();
+
+	if(threadIdx.x < 8)
+		f1[threadIdx.x] = FourToOneTop((a4_16 >> 4), f0, kLay[1]);
+	syncwarp();
+
+	if(threadIdx.x < 32)
+		f2[threadIdx.x] = FourToOneTop(a64, f1, kLay[2]);
+	syncthreads();
+
+	if(threadIdx.x < 128)
+		f3[threadIdx.x] = FourToOneTop(a256, f2, kLay[3]);
+	syncthreads();;	// threadIdx.x < 512
+
+	f4[threadIdx.x] = FourToOneTop(a1024, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
+
+	__half2* pout = out + threadIdx.x * 4;
+	pout[0] = FourToOneTop(a1024, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
 }// ----------------------------------------------------------------------------------------------
 
 // GridDim.x = 512 blocks; BlockDim.x = 1024 threads;
