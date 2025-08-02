@@ -144,7 +144,7 @@ static __global__ void glTop3(const uint64_t* __restrict__ in_val, __half2* __re
 	out[threadIdx.x] = FourToOneTop(src, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
 }// ----------------------------------------------------------------------------------------------
 
-// 1024 thread: 4 out/thread; in_val[64](64*64=4096values) out[2048](half2)
+// 1024 thread: 4 out(2*half2)/thread; in_val[64](64*64=4096values) out[2048](half2)
 static __global__ void glTop4(const uint64_t* __restrict__ in_val, __half2* __restrict__ out){
 	__shared__ uint64_t src[64], a4_16, a64, a256[4], a1024[16];
 	__shared__ uint64_t src32[64];
@@ -195,17 +195,15 @@ static __global__ void glTop4(const uint64_t* __restrict__ in_val, __half2* __re
 	if(threadIdx.x < 512)
 		f4[threadIdx.x] = FourToOneTop(a1024, f3, kLay[4]);// __half2half2(fup) + kf * kLay[4];
 	syncthreads();
-	// threadIdx.x < 2048
-
-	for(int j = 0; j < 2; j++){
-		const uint64_t maska = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
-		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + maska * 4)[threadIdx.x & 1];
-		const __half fup = (reinterpret_cast<const __half*>(f_prev))[threadIdx.x / 2];
-		return __half2half2(fup) + kf * klay;
-	}
-
-	__half2* pout = out + threadIdx.x * 4;
-	pout[0] = FourToOneTop(a1024, f4, kLay[5]);// __half2half2(fup) + kf * kLay[4];
+	// threadIdx.x < 1024
+	const auto shift = 4 * (threadIdx.x & 15);
+	const uint32_t maska = uint32_t(src[threadIdx.x / 16] >> shift) & 0xF;
+	const __half2* kf = reinterpret_cast<const __half2*>(kF4 + maska * 4);
+	const __half2 fup = __half2half2((reinterpret_cast<const __half*>(f4))[threadIdx.x / 2]);
+	// threadIdx[1024] out[2048]
+	__half2* pout = out + threadIdx.x * 2;
+	pout[0] = fup + kf[0] * kLay[5];
+	pout[1] = fup + kf[1] * kLay[5];
 }// ----------------------------------------------------------------------------------------------
 
 // GridDim.x = 512 blocks; BlockDim.x = 1024 threads;
