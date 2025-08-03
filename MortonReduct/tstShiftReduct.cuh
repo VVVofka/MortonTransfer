@@ -209,32 +209,7 @@ int up_f5(unsigned seed = 0){
 		return 0;
 	return -1;
 }// -------------------------------------------------------------------------------------------------------------
-int up_f6(unsigned seed = 0){
-	srand(seed ? seed : (unsigned)time(0));
-	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64 * 64);
-	std::vector<int> vini = MortonHostModel::unpack(vin64);
-	//for(int j = 0; j < 4; j++) Dumps::dump1D_uns64(vin64[j]), printf("0x%016llX  %zu\n", vin64[j], vin64[j]);
-	// ####### Lays  ########################################################
-	using namespace LAYs;
-	Lays lays(6, MortonHostModel::kLay, MortonHostModel::vkF().data());
-	vector<double> vf_res_lays = *lays.run(vini, -4, -256);
-	//lays.dump();
-	//Dumps::VDouble(vf_res_lays, 8, "vf_res_lays:");
-	// device #########################################################
-	CudaArray<uint64_t> data_a_in(vin64);
-	CudaArrayD1<__half2> data_f_out(2048);
-	ConstMem::loadKLay(MortonHostModel::kLay, sizeof(MortonHostModel::kLay) / sizeof(MortonHostModel::kLay[0]));
-	ConstMem::loadKF4(MortonHostModel::vkF());
 
-	glTop4 << <1, 1024 >> > (data_a_in.pdevice, data_f_out.pdevice);
-	CHECK_CUDA(cudaDeviceSynchronize());
-	data_f_out.copy2host();
-	vector<double> vhout = Convert::VectorHalf2ToVector<double>(data_f_out.phost, data_f_out.szall);
-	//Dumps::VDouble(vhout, 8, "vhout:");
-	if(Compare::vectors(vf_res_lays, vhout, 0.003))
-		return 0;
-	return -1;
-}// -------------------------------------------------------------------------------------------------------------
 int mid(unsigned seed = 0){
 	srand(seed ? seed : (unsigned)time(0));
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(1024 * 1024, 0.45);
