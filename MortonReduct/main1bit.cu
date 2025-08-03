@@ -22,6 +22,7 @@ int main(){
 		ret += TST_ShiftReduce::up_f3();
 		ret += TST_ShiftReduce::up_f4();
 		ret += TST_ShiftReduce::up_f5();
+		ret += TST_ShiftReduce::up_f6();
 	}
 	return ret;
 }
