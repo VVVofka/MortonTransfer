@@ -52,12 +52,12 @@ int tst_rnd_up(){
 		assert(vresh.size() == 1);
 		uint64_t resh4 = vresh[0];
 
-		uint64_t resd4, resd16;
-		get_topA4A16(vin64[0], resd4, resd16);
-		std::vector<int> vres16unpack = MortonHostModel::unpack(std::vector<uint64_t>({resd16}));
+		uint64_t a4_16;
+		a4_16 = get_topA4A16(vin64[0]);
+		std::vector<int> vres16unpack = MortonHostModel::unpack(std::vector<uint64_t>({a4_16 >> 4}));
 		vres16unpack.resize(v16.size());
 
-		if(resh4 != resd4){
+		if(resh4 != (a4_16 & 4)){
 			printf("tst_rnd_up() j=%d Error! (resh4 != resd4)\n", j);
 			return -1;
 		}
@@ -80,9 +80,9 @@ int up_f3(unsigned seed = 0){
 	assert(vresh.size() == 1);
 	uint64_t resh4 = vresh[0];
 
-	uint64_t in64 = vin64[0], resd4, resd16;
-	get_topA4A16(in64, resd4, resd16);
-	std::vector<int> vres16unpack = MortonHostModel::unpack(std::vector<uint64_t>({resd16}));
+	uint64_t in64 = vin64[0], a4_16;
+	a4_16 = get_topA4A16(in64);
+	std::vector<int> vres16unpack = MortonHostModel::unpack(std::vector<uint64_t>({a4_16 >> 4}));
 	vres16unpack.resize(v16.size());
 
 	std::vector<MortonHostModel::Ar4> vklays(sizeof(MortonHostModel::kLay) / sizeof(MortonHostModel::kLay[0]));
@@ -93,7 +93,7 @@ int up_f3(unsigned seed = 0){
 	//Dumps::dump1D_uns64(resd16, "Sec ");	printf("0x%016llX %zu\n", resd16, resd16);
 	//Dumps::dump1D_uns64(in64, "In: ");	printf("0x%016llX %zu\n", in64, in64);
 
-	MortonHostModel::Ar4 kf_0 = MortonHostModel::kF(resd4);
+	MortonHostModel::Ar4 kf_0 = MortonHostModel::kF(a4_16 & 15);
 	//printf("kLay0: %.2f\n", vklays[0][0]);
 	//Dumps::dumpAr4(kf_0, "kf_0: ");
 	MortonHostModel::Ar4 f_0 = kf_0 * vklays[0];
@@ -105,7 +105,7 @@ int up_f3(unsigned seed = 0){
 	//printf("\nkLay1: %.2f\n", vklays[1][0]);
 	for(int j = 0; j < 4; j++){
 		//printf("\nj_lay1 = %d\n", j);
-		uint64_t a1 = (resd16 >> (j * 4)) & 0xF;
+		uint64_t a1 = ((a4_16 >> 4) >> (j * 4)) & 0xF;
 		//Dumps::dump1D_uns64(a1, "a1: ");		printf("a1: 0x%016llX %zu\n", a1, a1);
 
 		MortonHostModel::Ar4 kf_1 = MortonHostModel::kF(a1);
