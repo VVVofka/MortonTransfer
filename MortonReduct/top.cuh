@@ -237,6 +237,15 @@ static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 	const auto id_in = blockIdx.x * 64 + threadIdx.x;
 	shr[threadIdx.x] = reduct64to1(data_in[id_in]) << threadIdx.x;
 	syncthreads();
+	//if(threadIdx.x < 32)
+	//	shr[threadIdx.x * 2] |= shr[threadIdx.x * 2 + 1];
+	//syncwarp();
+	//if(threadIdx.x < 16)
+	//	shr[threadIdx.x * 4] |= shr[threadIdx.x * 4 + 2];
+	//syncwarp();
+	//if(threadIdx.x < 8)
+	//	shr[threadIdx.x * 8] |= shr[threadIdx.x * 8 + 4];
+
 	if(threadIdx.x == 0){
 		uint64_t ret = shr[0];
 #pragma unroll
