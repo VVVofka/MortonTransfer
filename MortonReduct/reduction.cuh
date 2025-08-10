@@ -28,6 +28,37 @@ static __device__ __host__ __forceinline__ uint64_t reduct32by1bit(const uint64_
 		((sum & 0x1000) >> 9) | ((sum & 0x100) >> 6) | ((sum & 0x10) >> 3) | (sum & 0x1);
 	return dst;	// 32 bit
 } // ////////////////////////////////////////////////////////////////////////////////
+static __device__ __host__ __inline__ uint64_t get_topA4A16(const uint64_t src){
+	// 64 -> 16 unpack
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	sum0 >>= 1;			// 1 if 2 or 3
+	sum0 |= sum0 >> 1;  // or if 4 ( res in pos 0)
+	uint64_t ret = pack16(sum0);
+
+	// 16 unpack -> 4 unpack
+	constexpr uint64_t M0 = 0x0001'0001'0001'0001ULL, M1 = M0 << 4, M2 = M1 << 4, M3 = M2 << 4;
+	uint64_t sum1 = (sum0 & M0) + ((sum0 & M1) >> 4) + ((sum0 & M2) >> 8) + ((sum0 & M3) >> 12);
+	sum1 >>= 1;			// 1 if 2 or 3
+	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
+	return (ret << 4) | pack4(sum1);
+} // ----------------------------------------------------------------------------------------------
+static __device__ __host__ __inline__ uint64_t get_topA1A4A16(const uint64_t src){
+	// 64 -> 16 unpack
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	sum0 >>= 1;			// 1 if 2 or 3
+	sum0 |= sum0 >> 1;  // or if 4 ( res in pos 0)
+	uint64_t ret = pack16(sum0);
+
+	// 16 unpack -> 4 unpack
+	constexpr uint64_t M0 = 0x0001'0001'0001'0001ULL, M1 = M0 << 4, M2 = M1 << 4, M3 = M2 << 4;
+	uint64_t sum1 = (sum0 & M0) + ((sum0 & M1) >> 4) + ((sum0 & M2) >> 8) + ((sum0 & M3) >> 12);
+	sum1 >>= 1;			// 1 if 2 or 3
+	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
+	uint64_t pck = pack4(sum1);
+	return (ret << 5) | (pck << 1) | (uint64_t)get_a(pck);
+} // ----------------------------------------------------------------------------------------------
 static __device__ __host__ __forceinline__ uint64_t reduct64to16bit(const uint64_t src){ // src:64 values 8 1 bit
 	// sum by 4 bit, if sum < 2 then 0 else 1
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
@@ -62,6 +93,25 @@ static __device__ __host__ __forceinline__ uint64_t reduct64to1(const uint64_t s
 	sum >>= 1;  // 1 if 2 or 3
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
 	return sum & M1;
+} // ////////////////////////////////////////////////////////////////////////////////
+static __device__ __host__ __forceinline__ uint32_t reduct64to1_u32(const uint64_t src){
+	// sum by 4 bit, if sum < 2 then 0 else 1
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+
+	constexpr uint64_t M4 = 0x0001'0001'0001'0001ULL;
+	sum = (sum & M4) | ((sum & (M4 << 4)) >> 3) | ((sum & (M4 << 8)) >> 6) | ((sum & (M4 << 12)) >> 9);
+	sum = (sum & M4) + ((sum >> 1) & M4) + ((sum >> 2) & M4) + ((sum >> 3) & M4);
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+
+	uint32_t ret = uint32_t((sum & 1) + ((sum >> 16) & 1) + ((sum >> 32) & 1) + ((sum >> 48) & 1));
+	ret >>= 1;  // 1 if 2 or 3
+	ret |= ret >> 1;    // or 1 if 4 ( res in pos 0)
+	return ret & 1;
 } // ////////////////////////////////////////////////////////////////////////////////
 static __device__ __host__ __forceinline__ uint64_t reduct64by1bit(const uint64_t* __restrict__ src){
 	// sum by 4 bit, if sum < 2 then 0 else 1
@@ -124,8 +174,13 @@ static __device__ __inline__ void reduct64by1bit_x2(const uint64_t* __restrict__
 	uint64_t data_mid[4];
 	reduct64by1bit_x2(data_dn, data_mid, data_up);
 }// ************************************************************************************
+__device__ __inline__ void reduct64toCombo(const uint64_t* __restrict__ data_in,
+							uint32_t* __restrict__ data_out){
+	
+	
+}// ************************************************************************************
 
-static __host__ bool testreduct(unsigned seed = 0){	// seed = 0
+static __host__ int testreduct(unsigned seed = 0){	// seed = 0
 	srand(seed ? seed : (unsigned)time(0));
 	std::vector<int> vtstin(64 * 4);
 	for(int& i : vtstin) i = rand() & 1;
@@ -177,8 +232,8 @@ static __host__ bool testreduct(unsigned seed = 0){	// seed = 0
 			printf("Error old i=%d result=%d expect=%d\n", i, result_old, expect);
 		//		if(result_new != expect)
 		//			printf("Error new i=%d result=%d expect=%d\n", i, result_new, expect);
-		return false;
+		return -1;
 	}
 	printf("Test reduct64by1bit() Ok\n");
-	return true;
+	return 0;
 }

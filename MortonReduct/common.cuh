@@ -16,6 +16,7 @@
     } while (0)
 
 __device__ __host__ __forceinline__ uint32_t get_a(unsigned a4){return (0b1111111011101000 >> a4) & 1;}
+__device__ __host__ __forceinline__ uint32_t get_a(uint64_t a4){return (0b1111111011101000 >> a4) & 1;}
 __device__ __host__ __forceinline__ uint32_t get_a15(unsigned a4){ return (0b1111111011101000 >> (a4 & 15)) & 1; }
 
 #pragma warning(push)
@@ -23,6 +24,20 @@ __device__ __host__ __forceinline__ uint32_t get_a15(unsigned a4){ return (0b111
 __device__ __forceinline__ void syncwarp(){ __syncwarp (); }
 __device__ __forceinline__ void syncthreads(){ __syncthreads(); }
 #pragma warning(pop)
+
+__device__ __host__ __forceinline__ uint64_t pack4(uint64_t a){
+	return (a & 0x0001) |
+		((a & 0x0001'0000) >> 15) |
+		((a & 0x0001'0000'0000) >> 30) |
+		((a & 0x0001'0000'0000'0000) >> 45);
+}// ----------------------------------------------------------------------------------------------
+__device__ __host__ __forceinline__ uint64_t pack16(uint64_t a){
+	return (a & 0x1) | ((a & 0x10) >> 3) | ((a & 0x100) >> 6) | ((a & 0x1000) >> 9) |
+		((a & 0x1'0000) >> 12) | ((a & 0x10'0000) >> 15) | ((a & 0x100'0000) >> 18) | ((a & 0x1000'0000) >> 21) |
+		((a & 0x1'0000'0000) >> 24) | ((a & 0x10'0000'0000) >> 27) | ((a & 0x100'0000'0000) >> 30) | ((a & 0x1000'0000'0000) >> 33) |
+		((a & 0x1'0000'0000'0000) >> 36) | ((a & 0x10'0000'0000'0000) >> 39) | ((a & 0x100'0000'0000'0000) >> 42) | ((a & 0x1000'0000'0000'0000) >> 45);
+} // ----------------------------------------------------------------------------------------------
+
 
 namespace Convert{
 template <typename T> std::vector<T> VectorHalf2ToVector(const std::vector<__half2>& vh2){

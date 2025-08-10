@@ -15,6 +15,7 @@
 
 int main(){
 	int ret = 0;
+	ret += testreduct();
 	//ret = TST_ShiftReduce::test01();
 	//ret = TST_ShiftReduce::tst_rnd_up();
 	//ret = TST_ShiftReduce::mid(174491);

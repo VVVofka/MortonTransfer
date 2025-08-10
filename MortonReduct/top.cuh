@@ -5,33 +5,6 @@
 #include <cuda_fp16.h>
 #include <cuda/std/cassert>
 // ----------------------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ uint64_t pack4(uint64_t a){
-	return (a & 0x0001) |
-		((a & 0x0001'0000) >> 15) |
-		((a & 0x0001'0000'0000) >> 30) |
-		((a & 0x0001'0000'0000'0000) >> 45);
-}// ----------------------------------------------------------------------------------------------
-static __device__ __host__ __forceinline__ uint64_t pack16(uint64_t a){
-	return (a & 0x1) | ((a & 0x10) >> 3) | ((a & 0x100) >> 6) | ((a & 0x1000) >> 9) |
-		((a & 0x1'0000) >> 12) | ((a & 0x10'0000) >> 15) | ((a & 0x100'0000) >> 18) | ((a & 0x1000'0000) >> 21) |
-		((a & 0x1'0000'0000) >> 24) | ((a & 0x10'0000'0000) >> 27) | ((a & 0x100'0000'0000) >> 30) | ((a & 0x1000'0000'0000) >> 33) |
-		((a & 0x1'0000'0000'0000) >> 36) | ((a & 0x10'0000'0000'0000) >> 39) | ((a & 0x100'0000'0000'0000) >> 42) | ((a & 0x1000'0000'0000'0000) >> 45);
-} // ----------------------------------------------------------------------------------------------
-static __device__ __host__ __inline__ uint64_t get_topA4A16(const uint64_t src){
-	// 64 -> 16 unpack
-	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
-	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
-	sum0 >>= 1;			// 1 if 2 or 3
-	sum0 |= sum0 >> 1;  // or if 4 ( res in pos 0)
-	uint64_t ret = pack16(sum0);
-
-	// 16 unpack -> 4 unpack
-	constexpr uint64_t M0 = 0x0001'0001'0001'0001ULL, M1 = M0 << 4, M2 = M1 << 4, M3 = M2 << 4;
-	uint64_t sum1 = (sum0 & M0) + ((sum0 & M1) >> 4) + ((sum0 & M2) >> 8) + ((sum0 & M3) >> 12);
-	sum1 >>= 1;			// 1 if 2 or 3
-	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
-	return (ret << 4) | pack4(sum1);
-} // ----------------------------------------------------------------------------------------------
 __device__ __forceinline__ __half2 FourToOneTop(const uint64_t* src, const __half2* f_prev, const __half2 klay){
 	const uint64_t maska = (src[threadIdx.x / 32] >> (4 * ((threadIdx.x & 31) / 2))) & 0xF;
 	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + maska * 4)[threadIdx.x & 1];
@@ -225,33 +198,30 @@ static __device__ void dumpsrc(const uint32_t* v, size_t cnt, const char* c = nu
 		printf("\n");
 	}
 } // ===============================================================================================
-// GridDim.x = 1024 blocks; BlockDim.x = 64 threads;
-// Parametrs:
-// uint64_t data_in[65536]; 4'194'304 values (2048x2048)
-// uint32_t data_out[1024] // use 64 bit
 #define DUMPSRC(A, C) dumpsrc(A, sizeof(A)/sizeof(A[0]), C)
 
+// GridDim.x = 32 blocks; BlockDim.x = 32 threads;
+// Parametrs:
+// uint64_t data_in[16384]; 1'048'576 values (1024x1024)
+// uint32_t data_out[32] // 1024 values
 static __global__ void glUpMid3(const uint64_t* __restrict__ data_in,
 								uint32_t* __restrict__ data_out){
-	__shared__ uint64_t shr[64];
-	const auto id_in = blockIdx.x * 64 + threadIdx.x;
+	__shared__ uint32_t shr[32];
+	const unsigned id_in = blockIdx.x * 32 + threadIdx.x;
 	shr[threadIdx.x] = reduct64to1(data_in[id_in]) << threadIdx.x;
-	syncthreads();
-	//if(threadIdx.x < 32)
-	//	shr[threadIdx.x * 2] |= shr[threadIdx.x * 2 + 1];
-	//syncwarp();
-	//if(threadIdx.x < 16)
-	//	shr[threadIdx.x * 4] |= shr[threadIdx.x * 4 + 2];
-	//syncwarp();
-	//if(threadIdx.x < 8)
-	//	shr[threadIdx.x * 8] |= shr[threadIdx.x * 8 + 4];
+	syncwarp();
+	if((threadIdx.x & 0b1) == 0)
+		shr[threadIdx.x * 2] |= shr[threadIdx.x * 2 + 1];
+	syncwarp();
 
-	if(threadIdx.x == 0){
-		uint64_t ret = shr[0];
-#pragma unroll
-		for(unsigned j = 1; j < 64; j++)
-			ret |= shr[j];
-		data_out[blockIdx.x] = ret;	// 1024
-	}
+	if((threadIdx.x & 0b11) == 0)
+		shr[threadIdx.x * 4] |= shr[threadIdx.x * 4 + 2];
+	syncwarp();
+	
+	if((threadIdx.x & 0b111) == 0)
+		shr[threadIdx.x * 8] |= shr[threadIdx.x * 8 + 4];
+	syncwarp();
+
+	data_out[blockIdx.x] = shr[0] | shr[8] | shr[16] | shr[24];	// 1024
 }// ===============================================================================================
 
