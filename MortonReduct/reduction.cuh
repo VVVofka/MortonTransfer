@@ -176,8 +176,8 @@ static __device__ __inline__ void reduct64by1bit_x2(const uint64_t* __restrict__
 }// ************************************************************************************
 __device__ __inline__ void reduct64toCombo(const uint64_t* __restrict__ data_in,
 							uint32_t* __restrict__ data_out){
-	
-	
+
+
 }// ************************************************************************************
 
 static __host__ int testreduct(unsigned seed = 0){	// seed = 0
@@ -238,9 +238,10 @@ static __host__ int testreduct(unsigned seed = 0){	// seed = 0
 	return 0;
 } // ----------------------------------------------------------------------------------------------
 //blockDim.x = 4
-static __device__ __forceinline__ 
+// psrc[4]
+static __device__ __forceinline__
 void reduct4for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __restrict__ pdst){
-	__shared__ uint64_t dst[4];
+	__shared__ uint32_t dst[4];
 	const unsigned id_in = blockIdx.x * 4 + threadIdx.x;
 	const uint64_t src = psrc[id_in];
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
@@ -252,4 +253,35 @@ void reduct4for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __re
 	syncwarp();
 	if(threadIdx.x == 0)
 		pdst[blockIdx.x] = dst[0] | (dst[1] << 16) | (dst[2] << 32) | (dst[3] << 48);
+} // ----------------------------------------------------------------------------------------------
+//blockDim.x = 16
+// psrc[16]
+static __device__ __forceinline__
+void reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __restrict__ pdst){
+	__shared__ uint64_t dst1[4];
+	__shared__ uint32_t dst0[16];
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	{
+		const unsigned id_in = blockIdx.x * 16 + threadIdx.x;
+		const uint64_t src = psrc[id_in];
+		uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+		// 1 if >=2 else 0
+		sum >>= 1;  // 1 if 2 or 3
+		sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+		dst0[threadIdx.x] = (uint32_t)pack64(sum); // 16
+	}
+	syncwarp();
+	if(threadIdx.x < 4){
+		const uint32_t* src = dst0 + 4 * threadIdx.x;
+		const uint64_t& dst = dst1[threadIdx.x];
+		uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+		// 1 if >=2 else 0
+		sum >>= 1;  // 1 if 2 or 3
+		sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+		dst1[threadIdx.x] = pack64(sum);
+	}
+	syncwarp();
+
+	if(threadIdx.x == 0)
+		pdst[blockIdx.x] = dst1[0] | (dst1[1] << 16) | (dst1[2] << 32) | (dst1[3] << 48);
 } // ----------------------------------------------------------------------------------------------
