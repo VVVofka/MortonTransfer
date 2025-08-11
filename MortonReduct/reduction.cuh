@@ -43,22 +43,22 @@ static __device__ __host__ __inline__ uint64_t get_topA4A16(const uint64_t src){
 	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
 	return (ret << 4) | pack4(sum1);
 } // ----------------------------------------------------------------------------------------------
-static __device__ __host__ __inline__ uint64_t get_topA1A4A16(const uint64_t src){
-	// 64 -> 16 unpack
-	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
-	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
-	sum0 >>= 1;			// 1 if 2 or 3
-	sum0 |= sum0 >> 1;  // or if 4 ( res in pos 0)
-	uint64_t ret = pack16(sum0);
-
-	// 16 unpack -> 4 unpack
-	constexpr uint64_t M0 = 0x0001'0001'0001'0001ULL, M1 = M0 << 4, M2 = M1 << 4, M3 = M2 << 4;
-	uint64_t sum1 = (sum0 & M0) + ((sum0 & M1) >> 4) + ((sum0 & M2) >> 8) + ((sum0 & M3) >> 12);
-	sum1 >>= 1;			// 1 if 2 or 3
-	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
-	uint64_t pck = pack4(sum1);
-	return (ret << 5) | (pck << 1) | (uint64_t)get_a(pck);
-} // ----------------------------------------------------------------------------------------------
+//static __device__ __host__ __inline__ uint64_t get_topA1A4A16(const uint64_t src){
+//	// 64 -> 16 unpack
+//	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+//	uint64_t sum0 = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+//	sum0 >>= 1;			// 1 if 2 or 3
+//	sum0 |= sum0 >> 1;  // or if 4 ( res in pos 0)
+//	uint64_t ret = pack16(sum0);
+//
+//	// 16 unpack -> 4 unpack
+//	constexpr uint64_t M0 = 0x0001'0001'0001'0001ULL, M1 = M0 << 4, M2 = M1 << 4, M3 = M2 << 4;
+//	uint64_t sum1 = (sum0 & M0) + ((sum0 & M1) >> 4) + ((sum0 & M2) >> 8) + ((sum0 & M3) >> 12);
+//	sum1 >>= 1;			// 1 if 2 or 3
+//	sum1 |= sum1 >> 1;  // or if 4 ( res in pos 0)
+//	uint64_t pck = pack4(sum1);
+//	return (ret << 5) | (pck << 1) | (uint64_t)get_a(pck);
+//} // ----------------------------------------------------------------------------------------------
 static __device__ __host__ __forceinline__ uint64_t reduct64to16bit(const uint64_t src){ // src:64 values 8 1 bit
 	// sum by 4 bit, if sum < 2 then 0 else 1
 	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
@@ -236,4 +236,20 @@ static __host__ int testreduct(unsigned seed = 0){	// seed = 0
 	}
 	printf("Test reduct64by1bit() Ok\n");
 	return 0;
-}
+} // ----------------------------------------------------------------------------------------------
+//blockDim.x = 4
+static __device__ __forceinline__ 
+void reduct4for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __restrict__ pdst){
+	__shared__ uint64_t dst[4];
+	const unsigned id_in = blockIdx.x * 4 + threadIdx.x;
+	const uint64_t src = psrc[id_in];
+	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
+	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	// 1 if >=2 else 0
+	sum >>= 1;  // 1 if 2 or 3
+	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	dst[threadIdx.x] = pack64(sum);
+	syncwarp();
+	if(threadIdx.x == 0)
+		pdst[blockIdx.x] = dst[0] | (dst[1] << 16) | (dst[2] << 32) | (dst[3] << 48);
+} // ----------------------------------------------------------------------------------------------
