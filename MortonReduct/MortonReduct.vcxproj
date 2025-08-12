@@ -101,8 +101,10 @@
     <ClInclude Include="Lays.h" />
     <ClInclude Include="morton.cuh" />
     <ClInclude Include="MortonHostModel.cuh" />
+    <ClInclude Include="pack.cuh" />
     <ClInclude Include="reduction.cuh" />
     <ClInclude Include="shift.cuh" />
+    <ClInclude Include="сonvolution.cuh" />
     <CudaCompile Include="ShiftReduction.cuh" />
     <ClInclude Include="top.cuh" />
     <ClInclude Include="tstShiftReduct.cuh" />

@@ -3,6 +3,12 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include "constmem.cuh"
+#include "pack.cuh"
+#include "ñonvolution.cuh"
+//#define __CUDACC__
+//#include <cooperative_groups.h>
+#include <device_atomic_functions.hpp>
+
 static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
 	constexpr uint64_t M = 0x1111'1111U;
 	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
@@ -249,39 +255,35 @@ void reduct4for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __re
 	// 1 if >=2 else 0
 	sum >>= 1;  // 1 if 2 or 3
 	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
-	dst[threadIdx.x] = pack64(sum);
+	dst[threadIdx.x] = pack16(sum);
 	syncwarp();
 	if(threadIdx.x == 0)
 		pdst[blockIdx.x] = dst[0] | (dst[1] << 16) | (dst[2] << 32) | (dst[3] << 48);
 } // ----------------------------------------------------------------------------------------------
-//blockDim.x = 16
-// psrc[16]
+//blockDim.x = 8
+// psrc[8]
 static __device__ __forceinline__
-void reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __restrict__ pdst){
-	__shared__ uint64_t dst1[4];
-	__shared__ uint32_t dst0[16];
-	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
-	{
-		const unsigned id_in = blockIdx.x * 16 + threadIdx.x;
-		const uint64_t src = psrc[id_in];
-		uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
-		// 1 if >=2 else 0
-		sum >>= 1;  // 1 if 2 or 3
-		sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
-		dst0[threadIdx.x] = (uint32_t)pack64(sum); // 16
-	}
-	syncwarp();
-	if(threadIdx.x < 4){
-		const uint32_t* src = dst0 + 4 * threadIdx.x;
-		const uint64_t& dst = dst1[threadIdx.x];
-		uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
-		// 1 if >=2 else 0
-		sum >>= 1;  // 1 if 2 or 3
-		sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
-		dst1[threadIdx.x] = pack64(sum);
-	}
-	syncwarp();
+uint32_t reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc){
+	__shared__ uint32_t mid[4];
 
-	if(threadIdx.x == 0)
-		pdst[blockIdx.x] = dst1[0] | (dst1[1] << 16) | (dst1[2] << 32) | (dst1[3] << 48);
+	{
+		const unsigned id_in = blockIdx.x * 8 + threadIdx.x;
+		uint64_t sum = pack16(ñonvolution64to16(psrc[id_in]));
+		atomicAdd(mid + threadIdx.x, sum);
+		// 1 if >=2 else 0
+	}
+	syncwarp();
+	//if(threadIdx.x < 4){
+	//	const uint32_t* src = dst0 + 4 * threadIdx.x;
+	//	const uint64_t& dst = dst1[threadIdx.x];
+	//	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
+	//	// 1 if >=2 else 0
+	//	sum >>= 1;  // 1 if 2 or 3
+	//	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
+	//	dst1[threadIdx.x] = pack64(sum);
+	//}
+	//syncwarp();
+
+	//if(threadIdx.x == 0)
+	//	pdst[blockIdx.x] = dst1[0] | (dst1[1] << 16) | (dst1[2] << 32) | (dst1[3] << 48);
 } // ----------------------------------------------------------------------------------------------
