@@ -4,10 +4,8 @@
 #include <vector>
 #include "constmem.cuh"
 #include "pack.cuh"
-#include "ñonvolution.cuh"
-//#define __CUDACC__
-//#include <cooperative_groups.h>
-#include <device_atomic_functions.hpp>
+#include "convolution.cuh"
+#include <cooperative_groups.h>
 
 static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
 	constexpr uint64_t M = 0x1111'1111U;
@@ -243,36 +241,28 @@ static __host__ int testreduct(unsigned seed = 0){	// seed = 0
 	printf("Test reduct64by1bit() Ok\n");
 	return 0;
 } // ----------------------------------------------------------------------------------------------
-//blockDim.x = 4
-// psrc[4]
-static __device__ __forceinline__
-void reduct4for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __restrict__ pdst){
-	__shared__ uint32_t dst[4];
-	const unsigned id_in = blockIdx.x * 4 + threadIdx.x;
-	const uint64_t src = psrc[id_in];
-	constexpr uint64_t M = 0x1111'1111'1111'1111ULL;
-	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
-	// 1 if >=2 else 0
-	sum >>= 1;  // 1 if 2 or 3
-	sum |= sum >> 1;    // or 1 if 4 ( res in pos 0)
-	dst[threadIdx.x] = pack16(sum);
-	syncwarp();
-	if(threadIdx.x == 0)
-		pdst[blockIdx.x] = dst[0] | (dst[1] << 16) | (dst[2] << 32) | (dst[3] << 48);
-} // ----------------------------------------------------------------------------------------------
 //blockDim.x = 8
 // psrc[8]
 static __device__ __forceinline__
-uint32_t reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc){
+void reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc, uint64_t* __restrict__ pdst){
 	__shared__ uint32_t mid[4];
+	const unsigned id_in = blockIdx.x * 8 + threadIdx.x;
 
-	{
-		const unsigned id_in = blockIdx.x * 8 + threadIdx.x;
-		uint64_t sum = pack16(ñonvolution64to16(psrc[id_in]));
-		atomicAdd(mid + threadIdx.x, sum);
-		// 1 if >=2 else 0
-	}
+	uint32_t tmp = uint32_t(pack16(convolution64to16(psrc[id_in])));
+	uint32_t& m = mid[threadIdx.x / 2];
+	m = threadIdx.x & 1 ? 0 : tmp;
 	syncwarp();
+	if(threadIdx.x & 1)
+		m |= tmp << 16;
+	syncwarp();
+
+	m = pack8(convolution32to8(m));
+	syncwarp();
+
+	if(threadIdx.x == 0)
+		*pdst = mid[0] | (mid[1] << 8) | (mid[2] << 16) | (mid[3] << 24);
+	
+
 	//if(threadIdx.x < 4){
 	//	const uint32_t* src = dst0 + 4 * threadIdx.x;
 	//	const uint64_t& dst = dst1[threadIdx.x];
