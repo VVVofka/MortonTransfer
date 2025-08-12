@@ -97,6 +97,7 @@
     <ClInclude Include="CudaArray.h" />
     <ClInclude Include="CudaArrayD1.h" />
     <ClInclude Include="dumps.cuh" />
+    <ClInclude Include="expand.cuh" />
     <ClInclude Include="Lay.h" />
     <ClInclude Include="Lays.h" />
     <ClInclude Include="morton.cuh" />
