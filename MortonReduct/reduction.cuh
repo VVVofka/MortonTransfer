@@ -6,6 +6,7 @@
 #include "pack.cuh"
 #include "convolution.cuh"
 
+
 static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
 	constexpr uint64_t M = 0x1111'1111U;
 	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
@@ -240,6 +241,7 @@ static __host__ int testreduct(unsigned seed = 0){	// seed = 0
 	printf("Test reduct64by1bit() Ok\n");
 	return 0;
 } // ----------------------------------------------------------------------------------------------
+
 //blockDim.x = 8
 // psrc[8]
 static __device__ __forceinline__
@@ -259,5 +261,5 @@ void reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc, uint32_t* __r
 	syncwarp();
 
 	if(threadIdx.x == 0)
-		*pdst = mid[0] | (mid[1] << 8) | (mid[2] << 16) | (mid[3] << 24);
+		pack128to32(mid, pdst);
 } // ----------------------------------------------------------------------------------------------

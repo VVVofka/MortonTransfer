@@ -18,3 +18,13 @@ __device__ __host__ __forceinline__ uint32_t pack8(uint32_t a){
 	return (a & 0x1) | ((a & 0x10) >> 3) | ((a & 0x100) >> 6) | ((a & 0x1000) >> 9) |
 		((a & 0x1'0000) >> 12) | ((a & 0x10'0000) >> 15) | ((a & 0x100'0000) >> 18) | ((a & 0x1000'0000) >> 21);
 } // ----------------------------------------------------------------------------------------------
+// psrc[4]; pdst[1]
+static __device__ __host__ __forceinline__
+void pack128to32(const uint32_t* __restrict__ psrc, uint32_t* __restrict__ pdst){
+	*pdst = psrc[0] | (psrc[1] << 8) | (psrc[2] << 16) | (psrc[3] << 24);
+}  // ----------------------------------------------------------------------------------------------
+// psrc[2]; pdst[1]
+static __device__ __host__ __forceinline__
+void pack128to32(const uint64_t* __restrict__ psrc64, uint32_t* __restrict__ pdst){
+	pack128to32(reinterpret_cast<const uint32_t*>(psrc64), pdst);
+}  // ----------------------------------------------------------------------------------------------
