@@ -2,7 +2,7 @@
 
 namespace PackReduct{
 static __device__ __forceinline__
-void from128to32(){
+void from128to32by1(){
 
 } // ----------------------------------------------------------------------------------------------
 
