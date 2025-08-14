@@ -3,8 +3,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include "constmem.cuh"
-#include "pack.cuh"
-#include "convolution.cuh"
+#include "PackConvolution.cuh"
 
 static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
 	constexpr uint64_t M = 0x1111'1111U;
@@ -247,7 +246,7 @@ static __device__ __forceinline__
 void reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc, uint32_t* __restrict__ pdst){
 	__shared__ uint32_t mid[4];
 	const unsigned id_in = blockIdx.x * 8 + threadIdx.x;
-	uint32_t tmp = uint32_t(pack16(convolution64to16(psrc[id_in])));
+	uint32_t tmp = PackConvolution::from64to16(psrc[id_in]);
 	uint32_t& m = mid[threadIdx.x / 2];
 	m = threadIdx.x & 1 ? 0 : tmp;
 	syncwarp();
@@ -256,9 +255,32 @@ void reduct16for64bit_maxThread(const uint64_t* __restrict__ psrc, uint32_t* __r
 	syncwarp();
 
 	if((threadIdx.x & 1) == 0)
-		m = pack8(convolution32to8(m));
+		m = PackConvolution::from32to8(m);
 	syncwarp();
 
 	if(threadIdx.x == 0)
 		pack128to32(mid, pdst);
 } // ----------------------------------------------------------------------------------------------
+namespace Reduct{
+
+// BlockDim = 16
+// ptop[1]; pmid[4+16]; pdn[64]
+static __device__ __forceinline__
+void x64to32(const uint64_t* __restrict__ pdn, uint32_t* __restrict__ pmid, uint32_t* __restrict__ ptop){
+	__shared__ uint32_t mid0[16], mid1[4];
+
+	const auto id_dn = blockIdx.x * 64 + threadIdx.x * 4;
+	mid0[threadIdx.x] = PackConvolution::from128to32(pdn + id_dn);
+	pmid[blockIdx.x * 20 + threadIdx.x] = mid0[threadIdx.x];
+	syncwarp();
+
+	if(threadIdx.x < 4){
+		mid1[threadIdx.x] = PackConvolution::from128to32(mid0 + threadIdx.x * 4);
+		pmid[blockIdx.x * 20 + 16 + threadIdx.x] = mid1[threadIdx.x];
+	}
+	syncwarp();
+
+	if(threadIdx.x == 0)
+		ptop[blockIdx.x] = PackConvolution::from128to32(mid1);
+} // ----------------------------------------------------------------------------------------------
+} // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#####

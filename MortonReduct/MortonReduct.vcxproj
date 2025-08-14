@@ -103,7 +103,7 @@
     <ClInclude Include="morton.cuh" />
     <ClInclude Include="MortonHostModel.cuh" />
     <ClInclude Include="pack.cuh" />
-    <ClInclude Include="PackReduct.cuh" />
+    <ClInclude Include="PackConvolution.cuh" />
     <ClInclude Include="reduction.cuh" />
     <ClInclude Include="shift.cuh" />
     <ClInclude Include="convolution.cuh" />
