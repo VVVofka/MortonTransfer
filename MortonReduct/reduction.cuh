@@ -6,7 +6,6 @@
 #include "pack.cuh"
 #include "convolution.cuh"
 
-
 static __device__ __host__ __forceinline__ uint32_t reduct8by1bit(const uint32_t src){ // src 32 bit
 	constexpr uint64_t M = 0x1111'1111U;
 	uint64_t sum = (src & M) + ((src >> 1) & M) + ((src >> 2) & M) + ((src >> 3) & M);
