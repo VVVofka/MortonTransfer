@@ -37,13 +37,22 @@ void x64(const __half2* __restrict__ pfup,
 		mida0 = pmida0[blockIdx.x];
 	}
 	syncwarp();
+
 	if(threadIdx.x < 4){
-		const uint32_t maska = (mida1 << (threadIdx.x * 8)) & 0xFF;
+		const uint32_t shift = ((blockIdx.x & 1) * 4 + threadIdx.x / 4) * 4;
+		const uint32_t maska = (mida1 >> shift) & 0xF;
 		const __half2 kf = reinterpret_cast<const __half2*>(kF4 + maska * 4)[threadIdx.x & 1];
 		const __half fup = threadIdx.x & 2 ? fup2.y : fup2.x;
 		midf1[threadIdx.x] = kf * klays[2] + __half2half2(fup);
 	}
 	syncwarp();
+
+	const uint32_t shift = ((blockIdx.x & 1) * 4 + threadIdx.x / 4) * 4;
+	const uint32_t maska = (mida1 >> shift) & 0xF;
+	const __half2 kf = reinterpret_cast<const __half2*>(kF4 + maska * 4)[threadIdx.x & 1];
+	const __half fup = threadIdx.x & 2 ? fup2.y : fup2.x;
+	midf1[threadIdx.x] = kf * klays[2] + __half2half2(fup);
+
 
 	const unsigned id_in = blockIdx.x * 8 + threadIdx.x;
 	uint32_t tmp = uint32_t(pack16(convolution64to16(psrc[id_in])));
