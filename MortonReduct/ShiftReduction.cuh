@@ -3,7 +3,7 @@
 #include "shift.cuh"
 #include "reduce.cuh"
 
-static __global__ void glShiftReduction62by1X4(const uint64_t* __restrict__ data_in,
+static __global__ void glShiftReduce64by1X4(const uint64_t* __restrict__ data_in,
 					   uint64_t* __restrict__ data_shift,
 					   uint64_t* __restrict__ data_top,
 					   const int2 shift){
@@ -23,7 +23,7 @@ static __global__ void glShiftReduction62by1X4(const uint64_t* __restrict__ data
 	}
 	data_top[up_id_word] = reduct64by1bit(data_mid);
 }// -----------------------------------------------------------------------------------------------
-static __global__ void glShiftReduction62by1X4_mid(const uint64_t* __restrict__ data_in,
+static __global__ void glShiftReduce64by1X4_mid(const uint64_t* __restrict__ data_in,
 					   uint64_t* __restrict__ data_shift,
 					   uint64_t* __restrict__ data_mid,
 					   uint64_t* __restrict__ data_top,

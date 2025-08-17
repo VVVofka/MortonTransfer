@@ -387,8 +387,8 @@ int test_reduce(unsigned size_side = 32){
 }
 int main_(){
 	for(int j = 1; j < 100; j++){
-		if(!testreduct()){
-			printf("Step %d. Error testreduct!", j);
+		if(!testreduce()){
+			printf("Step %d. Error testreduce!", j);
 			return -j;
 		}
 	}

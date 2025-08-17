@@ -182,32 +182,36 @@ __device__ __inline__ void reduct64toCombo(const uint64_t* __restrict__ data_in,
 
 }// ************************************************************************************
 
-static __host__ int testreduct(unsigned seed = 0){	// seed = 0
+static __host__ int testreduce(unsigned seed = 0){	// seed = 0
+	constexpr bool IS_PRINT = false;
 	srand(seed ? seed : (unsigned)time(0));
 	std::vector<int> vtstin(64 * 4);
 	for(int& i : vtstin) i = rand() & 1;
-	printf("vtstin:\n");
-	for(int r = 0; r < 4; r++){
-		for(int c = 0; c < 64; c++){
-			if((c % 4 == 0) && c) printf(" ");
-			if((c % 16 == 0) && c) printf(" ");
-			printf("%d", vtstin[r * 64 + c]);
+	if(IS_PRINT){
+		printf("vtstin:\n");
+		for(int r = 0; r < 4; r++){
+			for(int c = 0; c < 64; c++){
+				if((c % 4 == 0) && c) printf(" ");
+				if((c % 16 == 0) && c) printf(" ");
+				if(IS_PRINT)(printf("%d", vtstin[r * 64 + c]));
+			}
+			if(IS_PRINT)(printf("\n"));
 		}
-		printf("\n");
+		printf("vtstres:\n");
 	}
-	printf("vtstres:\n");
 	std::vector<int> vtstres(64);
 	for(size_t j = 0; j < 64; j++){
 		int sum = 0;
-		for(size_t i = 0; i < 4; i++){
+		for(size_t i = 0; i < 4; i++)
 			sum += vtstin[j * 4 + i];
-		}
 		vtstres[j] = sum < 2 ? 0 : 1;
-		if((j % 4 == 0) && j) printf(" ");
-		if((j % 16 == 0) && j) printf("\n");
-		printf("%d", vtstres[j]);
+		if(IS_PRINT){
+			if((j % 4 == 0) && j) printf(" ");
+			if((j % 16 == 0) && j) printf("\n");
+			printf("%d", vtstres[j]);
+		}
 	}
-	printf("\n");
+	if(IS_PRINT)(printf("\n"));
 
 	std::vector<uint64_t> vin64(4);
 	for(size_t j = 0; j < 4; j++)
@@ -216,11 +220,12 @@ static __host__ int testreduct(unsigned seed = 0){	// seed = 0
 			uint64_t added = uint64_t(vtstin[id]) << i;
 			vin64[j] |= added;
 		}
-	printf("in64:\n");
-	for(int j = 0; j < 4; j++) printf("%I64X\n", vin64[j]);
-
+	if(IS_PRINT){
+		printf("in64:\n");
+		for(int j = 0; j < 4; j++) printf("%I64X\n", vin64[j]);
+	}
 	uint64_t out64_old = reduct64by1bit(vin64.data());
-	printf("old out64: %I64X\n", out64_old);
+	if(IS_PRINT)(printf("old out64: %I64X\n", out64_old));
 
 	//	uint64_t out64_new = reduct1bit_wo_lut(vin64.data());
 	//	printf("new out64: %I64X\n", out64_new);
