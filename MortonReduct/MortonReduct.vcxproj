@@ -104,11 +104,12 @@
     <ClInclude Include="MortonHostModel.cuh" />
     <ClInclude Include="pack.cuh" />
     <ClInclude Include="PackConvolution.cuh" />
-    <ClInclude Include="reduction.cuh" />
+    <ClInclude Include="reduce.cuh" />
     <ClInclude Include="shift.cuh" />
     <ClInclude Include="convolution.cuh" />
     <CudaCompile Include="ShiftReduction.cuh" />
     <ClInclude Include="top.cuh" />
+    <ClInclude Include="tstExpand.cuh" />
     <ClInclude Include="tstShiftReduct.cuh" />
   </ItemGroup>
   <ItemGroup>

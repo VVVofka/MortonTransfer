@@ -1,6 +1,6 @@
 #pragma once
 // top.cuh
-#include "reduction.cuh"
+#include "reduce.cuh"
 #include "constmem.cuh"
 #include <cuda_fp16.h>
 #include <cuda/std/cassert>

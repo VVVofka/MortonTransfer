@@ -15,14 +15,13 @@
 
 int main(){
 	int ret = 0;
-	ret += testreduct();
-	//ret = TST_ShiftReduce::test01();
-	//ret = TST_ShiftReduce::tst_rnd_up();
-	//ret = TST_ShiftReduce::mid(174491);
+	//ret += testreduct();
+	//ret = TST::ShiftReduce::test01();
+	ret = TST::ShiftReduce::tst_rnd_up();
 	for(int j = 0; j < 100; j++){
-		ret += TST_ShiftReduce::up_f3();
-		ret += TST_ShiftReduce::up_f4();
-		ret += TST_ShiftReduce::up_f5();
+		ret += TST::TOP::up_f3();
+		ret += TST::TOP::up_f4();
+		ret += TST::TOP::up_f5();
 	}
 	return ret;
 }

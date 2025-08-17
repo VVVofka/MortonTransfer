@@ -12,9 +12,10 @@
 #include <array>
 #include <iostream>
 #include "Lays.h"
+namespace TST{
 using std::vector;
 using std::string;
-namespace TST_ShiftReduce{
+namespace ShiftReduce{
 // -------------------------------------------------------------------------------------------------------------
 int test01(){
 	std::vector<uint64_t> vin = MortonHostModel::fillrnd_1bit(32 * 32);
@@ -44,9 +45,11 @@ int test01(){
 int tst_rnd_up(){
 	for(int j = 0; j < 10000; j++){
 		std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64);
+		Dumps::dump1D_uns64(vin64[0], "vin64[0]");
 		std::vector<int> vini = MortonHostModel::unpack(vin64);
 
 		std::vector<int> v16 = MortonHostModel::reduct(vini);
+		Dumps::dump1D_uns64(v16);
 		std::vector<int> v4 = MortonHostModel::reduct(v16);
 		std::vector<uint64_t> vresh = MortonHostModel::pack(v4);
 		assert(vresh.size() == 1);
@@ -69,6 +72,8 @@ int tst_rnd_up(){
 	printf("tst_rnd_up() Ok\n");
 	return 0;
 }// -------------------------------------------------------------------------------------------------------------
+} // ShiftReduce @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+namespace TOP{
 int up_f3(unsigned seed = 0){
 	srand(seed ? seed : (unsigned)time(0));
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64);
@@ -252,5 +257,5 @@ int mid(unsigned seed = 0){
 		return 0;
 	return -1;
 }// -------------------------------------------------------------------------------------------------------------
-
-} // namespace TST_ShiftReduce{
+} // TOP @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+} // TST @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

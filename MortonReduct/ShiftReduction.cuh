@@ -1,7 +1,7 @@
 #pragma once
 // ShiftReduction.cuh
 #include "shift.cuh"
-#include "reduction.cuh"
+#include "reduce.cuh"
 
 static __global__ void glShiftReduction62by1X4(const uint64_t* __restrict__ data_in,
 					   uint64_t* __restrict__ data_shift,

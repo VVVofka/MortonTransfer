@@ -8,7 +8,7 @@
 #include <cassert>
 #include <chrono>
 #include <string>
-#include "reduction.cuh"
+#include "reduce.cuh"
 #include "morton.cuh"
 #include "constmem.cuh"
 
