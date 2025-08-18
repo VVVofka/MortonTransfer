@@ -48,9 +48,9 @@ int tst_rnd_up(){
 		Dumps::dump1D_uns64(vin64[0], "vin64[0]");
 		std::vector<int> vini = MortonHostModel::unpack(vin64);
 
-		std::vector<int> v16 = MortonHostModel::reduct(vini);
+		std::vector<int> v16 = MortonHostModel::reduce(vini);
 		Dumps::dump1D_uns64(v16);
-		std::vector<int> v4 = MortonHostModel::reduct(v16);
+		std::vector<int> v4 = MortonHostModel::reduce(v16);
 		std::vector<uint64_t> vresh = MortonHostModel::pack(v4);
 		assert(vresh.size() == 1);
 		uint64_t resh4 = vresh[0];
@@ -79,8 +79,8 @@ int up_f3(unsigned seed = 0){
 	std::vector<uint64_t> vin64 = MortonHostModel::fillrnd_1bit(64);
 	std::vector<int> vini = MortonHostModel::unpack(vin64);
 
-	std::vector<int> v16 = MortonHostModel::reduct(vini);
-	std::vector<int> v4 = MortonHostModel::reduct(v16);
+	std::vector<int> v16 = MortonHostModel::reduce(vini);
+	std::vector<int> v4 = MortonHostModel::reduce(v16);
 	std::vector<uint64_t> vresh = MortonHostModel::pack(v4);
 	assert(vresh.size() == 1);
 	uint64_t resh4 = vresh[0];

@@ -4,7 +4,8 @@
 #include <valarray>
 #include <vector>
 #include <string>
-
+#include "morton.cuh"
+#include "CudaArray.h"
 namespace Dumps{
 // -------------------------------------------------------------------------------------------------------------
 void dump2D_vhost(std::vector<uint64_t>& v, const std::string& caption = ""){
@@ -75,6 +76,28 @@ void VDouble(const std::vector<double>& v, size_t column=8, const std::string& c
 	for(size_t n = 0; n < v.size(); n++){
 		printf("%+.2f ", v[n]);
 		if(((n+1) % column == 0) && n)
+			printf("\n");
+	}
+ } // -------------------------------------------------------------------------------------------------------------
+void dump2Dxy(const std::vector<int>& v, const std::string& caption = ""){
+	if(caption != "") printf("%s", caption.c_str());
+	size_t side = (size_t) sqrt(double(v.size()));
+	for(size_t y = 0; y < side; y++){
+		for(size_t x = 0; x < side; x++){
+			if((x % 4) == 0 && x){
+				if((x % 16) == 0)
+					printf("  ");
+				else
+					printf(" ");
+			}
+			auto val = v[y * side + x];
+			if(val)
+				printf("1");
+			else
+				printf(".");
+		}
+		printf("\n");
+		if(y && (y % 4) == 0)
 			printf("\n");
 	}
  } // -------------------------------------------------------------------------------------------------------------

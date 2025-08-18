@@ -74,7 +74,7 @@ __device__ __forceinline__ unsigned getMask_8to2bit(unsigned a8){
 	unsigned val1 = getMask_4to1bit(((a8 >> 1) & 1) | ((a8 >> 2) & 2) | ((a8 >> 3) & 4) | ((a8 >> 4) & 8));
 	return val0 | (val1 << 1);
 }// ***********************************************************************************************
-__global__ void reduct(const uint64_t* __restrict__ data_in,
+__global__ void reduce(const uint64_t* __restrict__ data_in,
 					   uint64_t* __restrict__ data_shift,
 					   unsigned* __restrict__ data_mid,
 					   unsigned* __restrict__ data_top,
@@ -363,7 +363,7 @@ int test_reduce(unsigned size_side = 32){
 
 	CHECK_CUDA(cudaMemcpy(d_input, h_input.data(), total_words * sizeof(uint64_t), cudaMemcpyHostToDevice));
 	ConstMem::setSZ0(size_side);
-	reduct << <(top_len + 255) / 256, 256 >> > (d_input, d_shift, d_mid, d_top, shift);
+	reduce << <(top_len + 255) / 256, 256 >> > (d_input, d_shift, d_mid, d_top, shift);
 	CHECK_CUDA(cudaDeviceSynchronize());
 
 	std::vector<unsigned> gpu_top(top_len);

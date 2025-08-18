@@ -86,7 +86,7 @@ ivector unpack(const std::vector<T>& v){
 	return ret;
 }  // -------------------------------------------------------------------------------------------------------------
 template <typename T>
-std::vector<T> reduct(const std::vector<T>& v){
+std::vector<T> reduce(const std::vector<T>& v){
 	std::vector<T> ret(v.size() / 4);
 	assert(v.size() && v.size() % 4 == 0);
 	for(unsigned j = 0; j < ret.size(); j++){
