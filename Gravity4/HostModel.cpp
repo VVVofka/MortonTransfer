@@ -11,8 +11,8 @@ void HostModel::Model::create(size_t sz_side){
 	}
 }
 
-void HostModel::Model::run(const std::vector<int>& v_in){
+void HostModel::Model::run(std::vector<int>* pvin){
 	for(size_t nlay = 0; nlay < vlay_up.size(); nlay++){
-
+		pvin = vlay_up[nlay].run(pvin);
 	}
 }

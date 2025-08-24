@@ -10,7 +10,7 @@ public:
 	size_t sz0 = 0;
 
 	void create(size_t sz_side);
-	void run(const std::vector<int>& v_in);
+	void run(std::vector<int>* v_in);
 
 	private:
 };

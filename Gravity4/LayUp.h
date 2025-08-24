@@ -4,8 +4,10 @@ namespace HostModel{
 
 class LayUp{
 public:
-	LayUp(size_t sz_side_ = 0){ sz_side = sz_side_; v.resize(sz_side * sz_side);}
+	LayUp(size_t sz_side_ = 0);
 	LayUp(const std::vector<int>& v_inp);
+
+	std::vector<int>* run(std::vector<int>* v_inp); // return &v
 
 	std::vector<int> v;
 	size_t sz_side = 0;
