@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MortonTransfer", "MortonTra
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MortonReduct", "MortonReduct\MortonReduct.vcxproj", "{F520DFEC-C280-401B-69A5-BB61CEC303FB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Gravity4", "Gravity4\Gravity4.vcxproj", "{41A3EB4D-2108-C69A-D264-7237B0DFC73F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{F520DFEC-C280-401B-69A5-BB61CEC303FB}.Debug|x64.Build.0 = Debug|x64
 		{F520DFEC-C280-401B-69A5-BB61CEC303FB}.Release|x64.ActiveCfg = Release|x64
 		{F520DFEC-C280-401B-69A5-BB61CEC303FB}.Release|x64.Build.0 = Release|x64
+		{41A3EB4D-2108-C69A-D264-7237B0DFC73F}.Debug|x64.ActiveCfg = Debug|x64
+		{41A3EB4D-2108-C69A-D264-7237B0DFC73F}.Debug|x64.Build.0 = Debug|x64
+		{41A3EB4D-2108-C69A-D264-7237B0DFC73F}.Release|x64.ActiveCfg = Release|x64
+		{41A3EB4D-2108-C69A-D264-7237B0DFC73F}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

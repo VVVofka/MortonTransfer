@@ -1,4 +1,5 @@
 #include "HostModel.h"
+#include "HostModel.h"
 #include <cassert>
 #include "dumps.cuh"
 #include <string>
