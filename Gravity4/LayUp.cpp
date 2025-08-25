@@ -12,7 +12,11 @@ HostModel::LayUp::LayUp(const std::vector<int>& v_inp){
 	v = v_inp;
 }
 
-std::vector<int>* HostModel::LayUp::run(std::vector<int>* v_in){
-
+std::vector<int>* HostModel::LayUp::run(const std::vector<int>& v_in){
+	assert(v.size() * 4 == v_in.size());
+	for(size_t j = 0; j < v.size(); j++){
+		int sum = v_in[j * 4] + v_in[j * 4 + 1] + v_in[j * 4 + 2] + v_in[j * 4 + 3];
+		v[j] = sum < 2 ? 0 : 1;
+	}
 	return &v;
 }
